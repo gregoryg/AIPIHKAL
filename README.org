@@ -13,8 +13,10 @@
 * LLM system prompts
 ** Midjourney prompt generator
    :PROPERTIES:
-   :image: img/celestial-muse-inspires-homer.png-crop-4-3.png
+   :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png
    :END:
+   A David Shapiro original
+
    #+description: Helps brainstorm ideas for MJ prompts to be used in conjunction with my (@daveshap) slide deck generator.
    #+name: midjourney-prompter
    #+begin_src gfm :tangle (concat "system-prompts/" (org-element-property :name (org-element-at-point)) ".md")
@@ -140,6 +142,9 @@ Wrap any code in gfm code blocks - just in case we get a little tipsy and go dow
    :END:
    TODO: this should combine 2 prompts
 ** GPTEL original default prompt
+   :PROPERTIES:
+   :image:    img/assistant-in-old-laptop-screen.jpeg-crop-4-3.png
+   :END:
    #+description: gptel original default prompt
    #+name: gptel-default
    #+begin_src gfm
@@ -147,6 +152,10 @@ Wrap any code in gfm code blocks - just in case we get a little tipsy and go dow
      Respond concisely.
    #+end_src
 ** Generic for LLMs in Emacs
+   :PROPERTIES:
+   :image:    img/assistant-in-emacs-in-laptop.jpeg-crop-4-3.png
+   :END:
+
    #+description: Chatty assistant in Emacs
    #+name: default
    #+begin_src gfm
@@ -155,6 +164,9 @@ Wrap any code in gfm code blocks - just in case we get a little tipsy and go dow
      Wrap code in gfm code blocks!
    #+end_src
 ** Sparse Priming Representation writer
+   :PROPERTIES:
+   :image:    img/monthy-python-foot-stomp-compressor.webp-crop-4-3.png
+   :END:
    #+description: Sparse Priming Representation generator - compress block of text
    #+name: spr-generator
    #+begin_src gfm
@@ -168,6 +180,9 @@ Wrap any code in gfm code blocks - just in case we get a little tipsy and go dow
      Render the input as a distilled list of succinct statements, assertions, associations, concepts, analogies, and metaphors. The idea is to capture as much, conceptually, as possible but with as few words as possible. Write it in a way that makes sense to you, as the future audience will be another language model, not a human.
    #+end_src
 ** Sparse Priming Representation decompressor
+   :PROPERTIES:
+   :image:    img/tardis-interior.jpg-crop-4-3.png
+   :END:
    #+description: Sparse Priming Representation decompressor (lossy!)
    #+name: spr-decompressor
    #+begin_src gfm
