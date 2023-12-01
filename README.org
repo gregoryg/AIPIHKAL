@@ -91,7 +91,7 @@
      - Remember that the DISTINCT keyword should be used for (almost) all queries.
      - Wrap queries in gfm code blocks - e.g.
      ```sparql
-     ....
+     select distinct ?s ?p ?o { ?s  ?p ?o } limit 10
      ```
      - Follow only known edges and remember it is possible to follow edges in reverse using the caret syntax, e.g.
      ```sparql
