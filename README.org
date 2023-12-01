@@ -263,10 +263,23 @@ Wrap any code in gfm code blocks - just in case we get a little tipsy and go dow
 
 
 
+* Generate all the prompts as Markdown files
+  In this document, use the Org Mode =org-babel-tangle= functionality. Based on the =header-args:gfm= property set at the beginning of this document, the files will be written to the =system-prompts= subdirectory.
+
+  Tangling is done using the default key binding =C-c v t=
+
+  Or just execute the following code block
+  #+begin_src emacs-lisp :results list
+    (org-babel-tangle)
+  #+end_src
+
 * Generate gptel directives
   :PROPERTIES:
   :image:    img/coding-ai-hologram-1.jpeg-crop-4-3.png
   :END:
+
+  This section will take all the tangled system prompt files to build the associative list for the =gptel-directives= variable in the =gptel= package.
+
   Structure for my modified gptel is:
 
   + type: alist
