@@ -147,7 +147,16 @@ Wrap any code in gfm code blocks - just in case we get a little tipsy and go dow
    :PROPERTIES:
    :image:    img/bojack-bojack-categorizing-everything.jpeg-crop-4-3.png
    :END:
-   TODO: this should combine 2 prompts
+   This prompt composes 2 prompts together using Org Mode's noweb syntax.
+
+   #+description: Bojack friend who also categories responses
+   #+name: bojack-categories
+   #+begin_src gfm :noweb yes
+     <<categorize-responses>>
+     --
+     <<bojack>>
+   #+end_src
+
 ** GPTEL original default prompt
    :PROPERTIES:
    :image:    img/assistant-in-old-laptop-screen.jpeg-crop-4-3.png
