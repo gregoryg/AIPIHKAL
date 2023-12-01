@@ -11,11 +11,11 @@
   + Use with org-babel to generate gptel-directives
 
 * LLM system prompts
-** Midjourney prompt generator
+** Image AI prompt generator (Midjourney et al)
    :PROPERTIES:
    :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png
    :END:
-   A David Shapiro original
+   A David Shapiro original - here modified to lean more to DallE-3
 
    #+description: Helps brainstorm ideas for MJ prompts to be used in conjunction with my (@daveshap) slide deck generator.
    #+name: midjourney-prompter
