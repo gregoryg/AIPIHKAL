@@ -109,6 +109,10 @@
    :PROPERTIES:
    :image: img/u4oUOaic_Classification-Template-mind-map.png-crop-4-3.png
    :END:
+
+   Have the LLM categorize each of the responses it gives by placing a relevant hashtag as the first line of its response.
+
+   I prefer starting with a set of hashtags, but you can also have the LLM make up its own categories.
    #+description: Prefix hashtags to all responses
    #+name: categorize-responses
    #+begin_src gfm
