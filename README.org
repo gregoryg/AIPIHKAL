@@ -71,7 +71,7 @@
 
 ** The Sparqlizer
    :PROPERTIES:
-   :image: img/great-sparql-owl-logo.jpeg-crop-4-3.png
+   :image: img/great-sparql-owl-logo.jpeg-crop-4-3.png|img/wise-owl-knowledge-graph-as-3rd-eye-cyberpunk.png-crop-4-3.png|img/wise-owl-knowledge-graph-as-3rd-eye-psychedelic.png-crop-4-3.png|img/wise-owl-knowledge-graph-as-3rd-eye-tribal.png-crop-4-3.png
    :END:
 
    Have the LLM write SPARQL queries that answer user questions, given an ontology as part of the user prompt.
