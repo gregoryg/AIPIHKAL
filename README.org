@@ -360,5 +360,6 @@ Wrap any code in gfm code blocks - just in case we get a little tipsy and go dow
 
     Use that function to set the value in your emacs - run this after tangling this file
     #+begin_src emacs-lisp :results none
-      (custom-set-variables '(gptel-directives (gjg/gptel-build-directives "~/projects/ai/AIPIHKAL/system-prompts/")))
+      ;; (custom-set-variables '(gptel-directives (gjg/gptel-build-directives "~/projects/ai/AIPIHKAL/system-prompts/")))
+      (setq gptel-directives (gjg/gptel-build-directives "~/projects/ai/AIPIHKAL/system-prompts/"))
     #+end_src
