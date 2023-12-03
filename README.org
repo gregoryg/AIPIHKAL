@@ -13,7 +13,7 @@
 * LLM system prompts
 ** Image AI prompt generator (Midjourney et al)
    :PROPERTIES:
-   :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png
+   :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png|img/enigmatic-figure-guides-shakespeare.png-crop-4-3.png
    :END:
    A David Shapiro original - here modified to lean more to DallE-3
 
