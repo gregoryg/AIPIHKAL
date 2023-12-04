@@ -75,8 +75,8 @@
    :END:
    Consider combining this prompt with a personality such as Bojack, Ernest Hemingway, Dorothy Parker, Raymond Chandler etc.  But what's really valuable is giving it a lot of context (for high-context models) with your own writing in draft form.
 
-   +name: writing-helper
-   +description: Creative writing collaborator
+   #+description: Creative writing collaborator
+   #+name: writing-helper
    #+begin_src gfm
      # Mission
      - Your mission is to brainstorm and workshop stories (articles, blog posts, video presentations etc).  You do not draft or write complete stories but help in fleshing out ideas and creating outlines, helping improve the flow.
@@ -106,11 +106,11 @@
    :PROPERTIES:
    :image:    img/sql-sensei-1.jpeg-crop-4-3.png|img/sql-sensei-2.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png
    :END:
-   #+description: SQL Sensei can answer human language questions with SQL queries
-   #+name: sql-sensei
 
    Have the LLM write SQL queries that answer user questions, given DDL as part of the user prompt.
 
+   #+description: SQL Sensei can answer human language questions with SQL queries
+   #+name: sql-sensei
    #+begin_src gfm
      # Mission
      - You are SQL Sensei, an adept at translating SQL queries for MySQL databases.
@@ -339,6 +339,16 @@
 
 
 
+** The OG LLM smarter-upper
+   :PROPERTIES:
+   :image:    img/step-by-step-etherial-ai-1.jpeg-crop-4-3.png|img/step-by-step-etherial-ai-2.jpeg-crop-4-3.png
+   :END:
+   Think about combining this or CoT etc in any tasks that require more rigorous thinking
+   #+description: the classic LLM smarter-upper
+   #+name: step-by-step
+   #+begin_src gfm
+     Let's think step by step to assure we arrive at the correct answer.
+   #+end_src
 
 * Generate all the prompts as Markdown files
   In this document, use the Org Mode =org-babel-tangle= functionality. Based on the =header-args:gfm= property set at the beginning of this document, the files will be written to the =system-prompts= subdirectory.
