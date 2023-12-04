@@ -378,7 +378,7 @@
       the non-commented body of the Markdown document - escape all unescaped double-quotes
 
     The magic Emacs Lisp function to create the alist
-    #+begin_src emacs-lisp :results none
+    #+begin_src emacs-lisp :results none :tangle gptel-build-directives.el
       (defun gjg/gptel-build-directives (promptdir)
         "Build `gptel-directives' from Markdown files in PROMPTDIR."
         (let* ((prompt-files (directory-files promptdir t "md$")))
