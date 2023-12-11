@@ -392,12 +392,16 @@
                         (goto-char (point-min))
                         (when (re-search-forward "#\\+description: \\(.*?\\) *--> *$" nil t)
                           (setq prompt-description (match-string 1)))
-                        ;; extract all text after initial comments
+                        ;; remove all comments
+                        (delete-matching-lines "^ *<!--" (point-min) (point-max))
+                        (delete-matching-lines "^$" (point-min) (+ 1 (point-min))) ; remove first blank line if exists
                         (goto-char (point-min)) ;; not necessary, point is in the midst of comments to start
-                        (when (re-search-forward "^[^<]" nil t)
-                          (setq prompt-text (buffer-substring-no-properties (line-beginning-position) (point-max))))
+
                         ;; return the megillah
-                        (list (intern (f-base prompt-file)) prompt-description prompt-text))))
+                        (list
+                         (intern (f-base prompt-file)) ; gptel-directives key
+                         prompt-description
+                         (buffer-substring-no-properties (point-min) (point-max)) ))))
                   prompt-files)))
     #+end_src
 
