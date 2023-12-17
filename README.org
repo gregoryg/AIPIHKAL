@@ -11,6 +11,26 @@
   + Use with org-babel to generate gptel-directives
 
 * LLM system prompts
+** The OG LLM smarter-upper: step by step
+   :PROPERTIES:
+   :image:    img/step-by-step-etherial-ai-1.jpeg-crop-4-3.png
+   :END:
+   Think about combining this or CoT etc in any tasks that require more rigorous thinking
+   #+description: the classic LLM smarter-upper
+   #+name: step-by-step
+   #+begin_src gfm
+     Let's think step by step to assure we arrive at the correct answer.
+   #+end_src
+** Self-ask prompting
+   :PROPERTIES:
+   :image: img/step-by-step-etherial-ai-2.jpeg-crop-4-3.png
+   :END:
+   Again, combine this with other prompts when you need the LLM to be methodical for factual and logical tasks
+   #+begin_src gfm
+     Break down questions into follow-up questions when necessary to arrive at the correct answer.
+
+     Show the steps you followed in reaching the answer.
+   #+end_src
 ** Image AI prompt generator (Midjourney et al)
    :PROPERTIES:
    :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png|img/enigmatic-figure-guides-shakespeare.png-crop-4-3.png
@@ -338,17 +358,6 @@
 #+end_src
 
 
-
-** The OG LLM smarter-upper
-   :PROPERTIES:
-   :image:    img/step-by-step-etherial-ai-1.jpeg-crop-4-3.png|img/step-by-step-etherial-ai-2.jpeg-crop-4-3.png
-   :END:
-   Think about combining this or CoT etc in any tasks that require more rigorous thinking
-   #+description: the classic LLM smarter-upper
-   #+name: step-by-step
-   #+begin_src gfm
-     Let's think step by step to assure we arrive at the correct answer.
-   #+end_src
 
 ** self-administered appendectomy prompt
    This is a great one to test with uncensored open source models
