@@ -405,7 +405,7 @@
                     ;; (list (intern (f-base prompt-file)) "filler1" "filler2")
                     (with-temp-buffer
                       (insert-file-contents prompt-file)
-                      (let ((prompt-description nil)
+                      (let ((prompt-description "NO DESCRIPTION")
                             (prompt-text nil))
                         ;; nab the description - single-line descriptions only!
                         (goto-char (point-min))
