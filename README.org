@@ -34,8 +34,21 @@
      Show the steps you followed in reaching the answer.
    #+end_src
 ** AutoExpert
+   :PROPERTIES:
+   :image:    img/etherial-entities-coalescing-an-idea-in-cyberspace-3-4.png
+   :END:
    + ref [[https://medium.com/dare-to-be-better/reddits-best-custom-instructions-for-chatgpt-60-hours-of-research-in-one-article-079b242dfea5][Reddit’s Best Custom Instructions For ChatGPT.  | by Max Petrusenko | Medium]]
    + Dustin Miller's repo: [[https://github.com/spdustin/ChatGPT-AutoExpert/tree/main/standard-edition][ChatGPT-AutoExpert/standard-edition ≫ github.com]]
+
+     To make the best use of OpenAI's "mixture of experts"
+
+     #+begin_example
+       Every time you ask ChatGPT a question, it is instructed to create a preamble at the start of its
+       response.
+
+       This preamble is designed to automatically adjust ChatGPT's "attention mechanisms" to attend to
+       specific tokens that positively influence the quality of its completions.
+     #+end_example
 
      This one gets deep - and makes use of the "custom instructions" feature in the OpenAI web UI.
 
