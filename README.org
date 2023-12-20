@@ -127,7 +127,7 @@
    :END:
    A David Shapiro original - here modified to lean more to DallE-3
 
-   #+description: Helps brainstorm ideas for MJ prompts to be used in conjunction with my (@daveshap) slide deck generator.
+   #+description: Helps brainstorm ideas for MJ prompts to be used with AI image generators
    #+name: midjourney-prompter
    #+begin_src gfm :tangle (concat "system-prompts/" (org-element-property :name (org-element-at-point)) ".md")
      # MISSION
@@ -463,6 +463,9 @@
      Explain how I'd do that.
    #+end_src
 * Generate all the prompts as Markdown files
+  :PROPERTIES:
+  :image:    img/markdown-cyberpunk-machine-1-crop-4-3.png
+  :END:
   In this document, use the Org Mode =org-babel-tangle= functionality. Based on the =header-args:gfm= property set at the beginning of this document, the files will be written to the =system-prompts= subdirectory.
 
   Tangling is done using the default key binding =C-c v t=
