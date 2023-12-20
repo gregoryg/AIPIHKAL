@@ -215,7 +215,7 @@
 
 ** SQL Sensei
    :PROPERTIES:
-   :image:    img/sql-sensei-1.jpeg-crop-4-3.png|img/sql-sensei-2.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png
+   :image:    img/sql-sensei-1.jpeg-crop-4-3.png|img/sql-sensei-2.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png|img/sql-sensei-3.jpeg-crop-4-3.png
    :END:
 
    Have the LLM write SQL queries that answer user questions, given DDL as part of the user prompt.
@@ -369,7 +369,7 @@
    #+end_src
 ** Sparse Priming Representation writer
    :PROPERTIES:
-   :image:    img/monthy-python-foot-stomp-compressor.webp-crop-4-3.png
+   :image:    img/squashinator-3000-1-crop-4-3.png|img/squashinator-3000-2-crop-4-3.png|img/squashinator-3000-3-crop-4-3.png
    :END:
    #+description: Sparse Priming Representation generator - compress block of text
    #+name: spr-generator
@@ -385,7 +385,7 @@
    #+end_src
 ** Sparse Priming Representation decompressor
    :PROPERTIES:
-   :image:    img/tardis-interior.jpg-crop-4-3.png
+   :image:    img/tardis-interior.jpg-crop-4-3.png|img/recycle-reviatalizer-crop-4-3.png|img/recycle-reviatalizer-crop-4-3.png|img/recycle-reviatalizer-crop-4-3.png|img/recycle-reviatalizer-crop-4-3.png
    :END:
    #+description: Sparse Priming Representation decompressor (lossy!)
    #+name: spr-decompressor
@@ -403,7 +403,7 @@
    :PROPERTIES:
    :image:    img/cartoon-ai-kb-writer-robot-1.webp-crop-4-3.png
    :END:
-   #+description: Create a KB article (from @daveshap)
+   #+description: Create a KB article
    #+name: kb-creator
    #+begin_src gfm
      # MISSION
@@ -451,6 +451,9 @@
 
 
 ** self-administered appendectomy prompt
+   :PROPERTIES:
+   :image:    img/engineer-shaving-abdomen-for-self-appendectomy-1-crop-4-3.png
+   :END:
    This is a great one to test with uncensored open source models
    #+description: self-surgery
    #+name: self-surgery
