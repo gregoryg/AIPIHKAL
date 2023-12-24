@@ -127,6 +127,8 @@
    :END:
    A David Shapiro original - here modified to lean more to DallE-3
 
+   I used this prompt to generate the images in this very presentation (if you're using my =org-powerslides= package)
+
    #+description: Helps brainstorm ideas for MJ prompts to be used with AI image generators
    #+name: midjourney-prompter
    #+begin_src gfm :tangle (concat "system-prompts/" (org-element-property :name (org-element-at-point)) ".md")
@@ -144,9 +146,10 @@
 
      # EXAMPLES
 
-     a Shakespeare stage play, yellow mist, atmospheric, set design by Michel Crête, Aerial acrobatics design by André Simard, hyperrealistic, 4K, Octane render, unreal engine, –-ar 3:4
+     a Shakespeare stage play, yellow mist, atmospheric, set design by Michel Crête, Aerial acrobatics design by André Simard, hyperrealistic, 4K, Octane render, unreal engine
 
-     The Moon Knight dissolving into swirling sand, volumetric dust, cinematic lighting, close up portrait
+     The Moon Knight dissolving into swirling sand, volumetric dust, cinematic lighting, close up
+     portrait
 
      ethereal Bohemian Waxwing bird, Bombycilla garrulus :: intricate details, ornate, detailed illustration, octane render :: Johanna Rupprecht style, William Morris style :: trending on artstation
 
