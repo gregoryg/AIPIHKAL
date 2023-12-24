@@ -1,2 +1,3 @@
 system-prompts/*.md
 gptel-build-directives.el
+uncropped-images/**
