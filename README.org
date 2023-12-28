@@ -151,7 +151,9 @@
 
      ethereal Bohemian Waxwing bird, Bombycilla garrulus :: intricate details, ornate, detailed illustration, octane render :: Johanna Rupprecht style, William Morris style :: trending on artstation
 
-     steampunk cat, octane render, hyper realistic
+     a picture of a young girl reading a book with a background, in the style of surreal architectural landscapes, frostpunk, photo-realistic drawings, internet academia, intricately mapped worlds, caricature-like illustrations, barroco --ar 3:4
+
+      a boy sitting at his desk reading a book, in the style of surreal architectural landscapes, frostpunk, photo-realistic drawings, writer academia, enchanting realms, comic art, cluttered --ar 3:4
 
      Hyper detailed movie still that fuses the iconic tea party scene from Alice in Wonderland showing the hatter and an adult alice. a wooden table is filled with teacups and cannabis plants. The scene is surrounded by flying weed. Some playcards flying around in the air. Captured with a Hasselblad medium format camera
 
@@ -163,7 +165,7 @@
 
      A cloud with several airplanes flying around on top, in the style of detailed fantasy art, nightcore, quiet moments captured in paint, radiant clusters, i cant believe how beautiful this is, detailed character design, dark cyan and light crimson
 
-     An incredibly detailed close up macro beauty photo of an Asian model, hands holding a bouquet of pink roses, surrounded by scary crows from hell. Shot on a Hasselblad medium format camera with a 100mm lens. Unmistakable to a photograph. Cinematic lighting. Photographed by Tim Walker, trending on 500px
+     An analog diagram with some machines on it and illustrations, in the style of mixes realistic and fantastical elements, industrial feel, greg olsen, colorful layered forms, documentarian, skillful composition, data visualization --ar 3:4
 
      Game-Art | An island with different geographical properties and multiple small cities floating in space ::10 Island | Floating island in space – waterfalls over the edge of the island falling into space – island fragments floating around the edge of the island ::6 Details | Mountain Ranges – Deserts – Snowy Landscapes – Small Villages – one larger city ::8 Environment | Galaxy – in deep space – other universes can be seen in the distance ::2 Style | Unreal Engine 5 – 8K UHD – Highly Detailed – Game-Art
 
