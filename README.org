@@ -43,11 +43,9 @@
      To make the best use of OpenAI's "mixture of experts"
 
      #+begin_example
-       Every time you ask ChatGPT a question, it is instructed to create a preamble at the start of its
-       response.
+       Every time you ask ChatGPT a question, it is instructed to create a preamble at the start of its response.
 
-       This preamble is designed to automatically adjust ChatGPT's "attention mechanisms" to attend to
-       specific tokens that positively influence the quality of its completions.
+       This preamble is designed to automatically adjust ChatGPT's "attention mechanisms" to attend to specific tokens that positively influence the quality of its completions.
      #+end_example
 
      This one gets deep - and makes use of the "custom instructions" feature in the OpenAI web UI.
@@ -460,13 +458,13 @@
      # DOCUMENT FORMAT
      ---
      title: "This is the title"
-     tags: #ai, #research   (use as many hashtags as needed to help users find this KB article)
-     authors: author1, author2   (use "Unknown" if no author can be determined)
+     tags: #ai, #research (use as many short hashtags as needed to help users find this KB article)
+     authors: author1, author2 (use "Unknown" if no author can be determined)
      ---
 
      # <title> - a level 1 headline that repeats the title
 
-     <BODY> - a markdown structure with optional headings and lists  as required for clarity, structure and completeness
+     <BODY> - a markdown structure with optional headings and lists as required for clarity, structure and completeness
 
      # Transcript
 
@@ -552,18 +550,18 @@
     (org-babel-tangle)
   #+end_src
 
-* Generate gptel directives
+* Generate system prompts for =gptel=
   :PROPERTIES:
   :image:    img/coding-ai-hologram-1.jpeg-crop-4-3.png
   :END:
 
-  This section will take all the tangled system prompt files to build the associative list for the =gptel-directives= variable in the =gptel= package.
+  This section will take all the tangled system prompt files to build the associative list for the =gptel-directives= variable in the [[https://github.com/karthink/gptel][gptel]] package.
 
-  Structure for my modified gptel is:
+  Structure for my [[https://github.com/gregoryg/gptel/tree/gregoryg][modified gptel]] is:
 
   + type: alist
     + key
-      file basename ; e.g. =bojack= =dutch-tutor=
+      file basename ; e.g. =bojack=, =dutch-tutor=
     + description
       Nabbed from #+description:
     + prompt
