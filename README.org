@@ -330,7 +330,7 @@
    #+end_src
 ** Categorize responses
    :PROPERTIES:
-   :image: img/u4oUOaic_Classification-Template-mind-map.png-crop-4-3.png
+   :image: img/classification-machine-01-crop-3-4.web|img/classification-machine-02-crop-4-3.png|img/classification-machine-03-crop-4-3.png|img/classification-machine-04-crop-4-3.png
    :END:
 
    Have the LLM categorize each of the responses it gives by placing a relevant hashtag as the first line of its response.
