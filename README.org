@@ -42,11 +42,11 @@
 
      To make the best use of OpenAI's "mixture of experts"
 
-     #+begin_example
+     #+begin_quote
        Every time you ask ChatGPT a question, it is instructed to create a preamble at the start of its response.
 
        This preamble is designed to automatically adjust ChatGPT's "attention mechanisms" to attend to specific tokens that positively influence the quality of its completions.
-     #+end_example
+     #+end_quote
 
      This one gets deep - and makes use of the "custom instructions" feature in the OpenAI web UI.
 
