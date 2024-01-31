@@ -3,9 +3,13 @@
 #+setupfile: ~/projects/emacs/org-themes/src/comfy_inline/comfy_inline.theme
 * Overview
 
+  My collection of prompts that can be composed, and tangled (see [[https://en.wikipedia.org/wiki/Literate_programming][Literate programming - Wikipedia ≫ en.wikipedia.org]]) for use with various APIs
+
+  System prompts are found in the =system-prompts/= directory.  If you use Emacs, you may generate them from this README.org file
+
+  My Video showing this package:
   [[https://www.youtube.com/watch?v=NFN1dSJa8yU&t=248s][Powerful AI Prompts I Have Known And Loved - that you can use - YouTube ≫ www.youtube.com]]
 
-  My collection of prompts that can be composed, and tangled (see [[https://en.wikipedia.org/wiki/Literate_programming][Literate programming - Wikipedia ≫ en.wikipedia.org]]) for use with various APIs
 
   goals
   + make prompts composable
