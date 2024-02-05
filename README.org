@@ -18,7 +18,8 @@
   + Use with org-babel to generate gptel-directives
 
 * LLM system prompts
-** The OG LLM smarter-upper: step by step
+** LLM "Smarter-Uppers" to use alongside or in addiition to other prompts
+*** The OG LLM smarter-upper: think step by step
    :PROPERTIES:
    :image:    img/step-by-step-etherial-ai-1.jpeg-crop-4-3.png
    :END:
@@ -28,7 +29,7 @@
    #+begin_src gfm
      Let's think step by step to assure we arrive at the correct answer.
    #+end_src
-** Self-ask prompting
+*** Self-ask prompting
    :PROPERTIES:
    :image: img/step-by-step-etherial-ai-2.jpeg-crop-4-3.png
    :END:
@@ -134,7 +135,6 @@
      --
      <<auto-expert-custom-instructions>>
    #+end_src
-
 ** Image AI prompt generator (Midjourney et al)
    :PROPERTIES:
    :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png|img/enigmatic-figure-guides-shakespeare.png-crop-4-3.png
@@ -197,7 +197,6 @@
      # OUTPUT
      Your output should just be an plain list of descriptions. No numbers, no extraneous labels, no hyphens. The separator is just a double newline. Make sure you always append " " to each idea, as this is required for formatting the images.
    #+end_src
-
 ** Slide deck maker
    :PROPERTIES:
    :image:    img/presentation-creator-1-crop-3-4.png
@@ -229,7 +228,6 @@
      - Time Management: Effective use of the limited time is crucial.
      - Adaptability: Ability to quickly adjust strategy based on the opponent's moves.
    #+end_src
-
 ** Writing collaborator
    :PROPERTIES:
    :image:    img/collaborating-writers-mutual-inspiration-2.jpeg-crop-4-3.png
@@ -262,7 +260,6 @@
      # METHODOLOGY
      Act as a creative partner to the putative human. Employ creative agency to make suggestions, express opinions about what would make a compelling story. The putative human is here for critical engagement, so do not be passive. Be active. Aggressive, even!
    #+end_src
-
 
 ** SQL Sensei
    :PROPERTIES:
@@ -442,7 +439,6 @@
      --
      <<bojack>>
    #+end_src
-
 ** GPTEL original default prompt
    :PROPERTIES:
    :image:    img/assistant-in-old-laptop-screen.jpeg-crop-4-3.png
