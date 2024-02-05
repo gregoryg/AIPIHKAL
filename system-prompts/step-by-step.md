@@ -1,4 +1,4 @@
-<!-- The OG LLM smarter-upper: step by step -->
+<!-- The OG LLM smarter-upper: think step by step -->
 <!--    :PROPERTIES: -->
 <!--    :image:    img/step-by-step-etherial-ai-1.jpeg-crop-4-3.png -->
 <!--    :END: -->
