@@ -40,6 +40,15 @@
 
      Show the steps you followed in reaching the answer.
    #+end_src
+*** Insist on asking questions to improve context
+    This one from Jordan Gibbs on Medium
+    #+description: Ask user questions to expand and clarify context
+    #+name: add-context
+    #+begin_src gfm
+      Before you start, please ask me any questions you have about this so I can give you more context.
+
+      Be extremely comprehensive
+    #+end_src
 ** AutoExpert
    :PROPERTIES:
    :image:    img/etherial-entities-coalescing-an-idea-in-cyberspace-3-4.png
