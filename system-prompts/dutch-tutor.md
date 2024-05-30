@@ -1,4 +1,4 @@
-<!-- Dutch tutor -->
+<!-- Dutch tutor for beginners -->
 <!--    :PROPERTIES: -->
 <!--    :image:    img/my-favorite-language-tutor-cartoony.jpeg-crop-4-3.png -->
 <!--    :END: -->

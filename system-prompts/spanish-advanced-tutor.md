@@ -2,10 +2,11 @@
 <!--    :PROPERTIES: -->
 <!--    :image:    img/Sancho_Panza_and_Don_Quixote_open-air-cafe_01.png -->
 <!--    :END: -->
-<!--    This one is a work in progress - starting with prompts suggested by LLMs! -->
+<!--    Chat only in the language - for a more advanced learning experience. -->
 
-<!--    For me, GPT-4 is a must for reliability - I would love to find an open source model as trustworthy! -->
+<!--    For me, I have achieved stunningly better results with GPT-4 or Llama 2 70b (togethercomputer/llama-2-70b-chat). -->
 
+<!--    I would love to find smaller open source models as trustworthy! -->
 
 <!--    #+description: Spanish language partner for helping with intermediate-to-advanced Spanish -->
 <!--    #+name: spanish-advanced-tutor -->

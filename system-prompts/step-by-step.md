@@ -6,4 +6,4 @@
 <!--    #+description: the classic LLM smarter-upper -->
 <!--    #+name: step-by-step -->
 
-Let's think step by step to assure we arrive at the correct answer.
+Let's think step by step to to share ideas, maintain that collaborative spirit and arrive at the best answer.
