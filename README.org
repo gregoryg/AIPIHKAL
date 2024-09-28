@@ -171,7 +171,7 @@
    #+end_example
 #+description: Consider context of "audience knowledge" in generating answers
 #+name: audience-lens
-#+begin_src gfm
+#+begin_src gfm :tangle no
   always write your answer for a typescript developer with 30 years experience. When generating code use typescript unless another language is asked for.
 #+end_src
 ** Image AI prompt generator (Midjourney et al)
