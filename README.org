@@ -135,6 +135,45 @@
      --
      <<auto-expert-custom-instructions>>
    #+end_src
+** "Lens" / "Projection" / "message framing" idea of @stevenic on Openai's community
+   First, the original post:
+   #+begin_example
+     Big Idea: GPT as a universal concept translator
+
+     stevenic
+     I’m going to share one of the ideas that I’m most excited about for the potential use of these models and that’s as a universal concept translator.
+
+     I spend a lot of time thinking about language and when you get to the root of what language is you realize that it’s just a compression protocol. The ultimate goal of language is to transmit an idea, concept, or thought from one person to one or more other people. I’m doing that now. I’m using language to transmit an idea in my head to you the reader. The thing about language is that it’s highly compressed and the algorithm that’s needed to both compress it and decompress it are based off a set of priors we call world knowledge. If I say “Phil Donahue died this weekend” I can assume you have a similar world knowledge and you know who I’m talking about and that I’m referring to an event that happened in the past. If your world knowledge doesn’t fully align with mine you may be able to decompress part of that but you’ll ask for clarity around the parts you didn’t understand “oh really who was that?” We’ll often use things like analogies and examples as a way of tuning the compression algorithm on the sending side to help give “the audience” a better chance of successfully decompressing language to concepts in their head.
+
+     Another example; my coworkers and I can have a really “high bandwidth” discussion about programming because we all have a very similar set of priors we can lean on to decompress what each other is saying. To my wife it all sounds like gibberish but she can have a high bandwidth discussion with her colleagues about medical topics that mostly sounds like gibberish to me. So we don’t just have one compression/decompression algorithm for language. We have many.
+
+     So the idea… one of the most amazing things about these LLMs is their ability map language to virtually any concept. They know everything and they were originally designed for translation so it’s not surprising that they’re really good at taking the concepts for a complex topic like “multi attention heads in large language models” and compressing those concepts into language that a 5 year old could decompress and understand.
+
+     Recently I’ve made some progress on a prompting technique I call lenses which is just a simple way to shape the answer you get out of the model. Nothing radical here you’re just mixing into the prompt some instructions that say things like “always write your answer for a typescript developer with 30 years experience. When generating code use typescript unless another language is asked for.” Lenses are basically a better approach to the memories feature that ChatGPT is experimenting with (I turned memories off.)
+
+     What if you could create a lens that automatically re-writes everything you read or that someone says to you to better match your world knowledge? Basically everything you consume would be custom tailored and matched to your personal world knowledge making it easier for you to decompress (or easier to grok.) My bet is that the rate at which we could transmit information using language would increase 10x and the comprehension of the ideas being transmitted would increase 100x.
+
+     I think this is a huge idea… Thoughts?
+   #+end_example
+   Here are 2 examples of his actual lens prompts
+   #+begin_example
+     ### Post
+     [Re-write the original post for clarity. Retain all of the original ideas but add analogies if needed.]
+
+     ### Replies
+     - [Create a tl;dr of each reply]
+
+     ### Analysis
+     [Create a detailed analysis of the post and replies]
+
+     ### Extensions
+     [Propose extensions to the ideas in the thread]
+   #+end_example
+#+description: Consider context of "audience knowledge" in generating answers
+#+name: audience-lens
+#+begin_src gfm
+  always write your answer for a typescript developer with 30 years experience. When generating code use typescript unless another language is asked for.
+#+end_src
 ** Image AI prompt generator (Midjourney et al)
    :PROPERTIES:
    :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png|img/enigmatic-figure-guides-shakespeare.png-crop-4-3.png
