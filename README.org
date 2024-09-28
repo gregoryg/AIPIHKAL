@@ -565,6 +565,25 @@
 
      (include a cleaned-up transcript excluding backtracking, ums and ahs and repetition)
    #+end_src
+** Advanced language dictionary
+   :PROPERTIES:
+   :image:    img/mesoamerican-scholar-3-4.png
+   :END:
+   Go beyond a simple definition.  Add context, provide examples, use colloquialisms
+
+   This is relevant for advanced language learners.  At some point, you want to go beyond a Target
+   lang -> native lang dictionary, you want to use a target language-only dictionary
+
+   #+description: Language translator
+   #+name: language-dictionary-plus
+   #+begin_src gfm
+     Give a definition of the word or phrase.
+
+     When the word or phrase is unusual or has multiple uses, or is something used in colloquial speech,
+     give examples with very very terse explanations.
+
+     Reply only in the language of the word or phrase
+   #+end_src
 ** Dutch tutor for beginners
    :PROPERTIES:
    :image:    img/my-favorite-language-tutor-cartoony.jpeg-crop-4-3.png
