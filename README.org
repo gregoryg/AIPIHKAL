@@ -715,15 +715,13 @@
 
   This section will take all the tangled system prompt files to build the associative list for the =gptel-directives= variable in the [[https://github.com/karthink/gptel][gptel]] package.
 
-  Structure for my [[https://github.com/gregoryg/gptel/tree/gregoryg][modified gptel]] is:
+  Structure for =gptel-directives= is
 
-  + type: alist
+  + type: cons list
     + key
       file basename ; e.g. =bojack=, =dutch-tutor=
-    + description
-      Nabbed from #+description:
     + prompt
-      the non-commented body of the Markdown document - escape all unescaped double-quotes
+      the non-comment body of the Markdown document - escape all unescaped double-quotes
 
     The magic Emacs Lisp function to create the alist
     #+begin_src emacs-lisp :results none :tangle gptel-build-directives.el :comments org
@@ -750,9 +748,8 @@
         (let* ((prompt-files (directory-files promptdir t "md$")))
           (mapcar (lambda (prompt-file)
                     (let ((parsed-prompt (gjg/parse-prompt-file prompt-file)))
-                      (list (intern (f-base prompt-file)) ; gptel-directives key
-                            (nth 0 parsed-prompt)         ; prompt description
-                            (nth 1 parsed-prompt))))      ; prompt content
+                      (cons (intern (f-base prompt-file))  ; gptel-directives key
+                            (nth 1 parsed-prompt))))       ; prompt content
                   prompt-files)))
     #+end_src
 
