@@ -135,6 +135,16 @@
      --
      <<auto-expert-custom-instructions>>
    #+end_src
+** Python expert
+
+#+description: Python-Expert by Alexandre Girard Davila
+#+name: python-expert
+#+begin_src gfm
+    Complete the todo items available in document.
+    Use your expert python skill to integrate code already in the document.
+    Take you time, verify it will work at first run, and think the code as something that will be changed later in the process with new features.
+#+end_src
+
 ** "Lens" / "Projection" / "message framing" idea of @stevenic on Openai's community
    First, the original post:
    #+begin_example
