@@ -830,8 +830,8 @@
         (let* ((prompt-files (directory-files promptdir t "md$")))
           (mapcar (lambda (prompt-file)
                     (let ((parsed-prompt (gjg/parse-prompt-file prompt-file)))
-                      (cons (intern (f-base prompt-file))  ; gptel-directives key
-                            (nth 1 parsed-prompt))))       ; prompt content
+                      (cons (intern (file-name-base prompt-file))  ; gptel-directives key
+                            (nth 1 parsed-prompt))))               ; prompt content
                   prompt-files)))
     #+end_src
 
