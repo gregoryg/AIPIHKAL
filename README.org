@@ -842,3 +842,27 @@
       ;; (custom-set-variables '(gptel-directives (gjg/gptel-build-directives "~/projects/ai/AIPIHKAL/system-prompts/")))
       (setq gptel-directives (gjg/gptel-build-directives "~/code/AIPIHKAL/system-prompts/"))
     #+end_src
+
+** Doom Emacs Setup
+
+For Doom Emacs users, you can add the following configuration to your =~/.doom.d/config.el= file:
+
+#+begin_src emacs-lisp
+(use-package! gptel
+  :config
+  (setq
+   gptel-model 'claude-3-opus-20240229
+   gptel-backend (gptel-make-anthropic "Claude"
+                   :stream t :key "sk-..."))
+  (let ((build-directives-fun "~/projects/ai/AIPIHKAL/gptel-build-directives.el"))
+    (when (file-exists-p build-directives-fun)
+      (load build-directives-fun)
+      (setq gptel-directives (gjg/gptel-build-directives "~/projects/ai/AIPIHKAL/system-prompts/")
+            gptel-system-message (alist-get 'default gptel-directives)))))
+#+end_src
+
+*** Important Notes
+
+- Replace ="sk-..."= with your actual Anthropic API key.
+- Adjust the paths for =build-directives-fun= and the system prompts directory to match your setup.
+- Make sure you have the necessary files and directories set up as referenced in the configuration.
