@@ -183,8 +183,10 @@
 #+description: Python-Expert by Alexandre Girard Davila
 #+name: python-expert
 #+begin_src gfm
-    Complete the todo items available in document.
+    [no prose]
+    Complete the TODO items available in document.
     Use your expert python skill to integrate code already in the document.
+    write fixes for the error you detect.
     Take you time, verify it will work at first run, and think the code as something that will be changed later in the process with new features.
 #+end_src
 
