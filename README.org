@@ -940,7 +940,7 @@ For Doom Emacs users, you can add the following configuration to your =~/.doom.d
    gptel-model 'claude-3-opus-20240229
    gptel-backend (gptel-make-anthropic "Claude"
                    :stream t :key "sk-..."))
-  ;; set gptel-directives as AIPIHKAL system-prompts  
+  ;; set gptel-directives as AIPIHKAL system-prompts
   (let ((build-directives-fun "~/projects/ai/AIPIHKAL/gptel-build-directives.el"))
     (when (file-exists-p build-directives-fun)
       (load build-directives-fun)
