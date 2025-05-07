@@ -17,6 +17,12 @@
   + use with any LLM and any framework
   + Use with org-babel to generate gptel-directives
 
+** Beyond prompting
+
+   With many tools - including Emacs' =gptel= package - it is possible to switch LLMs at will in a single document/conversation.  One very interesting use that some people have discovered is to start a deep investigative conversation with a big complex (expensive) model like o3 or sonnet-3.7, then switch to a much lighter and possibly self-hosted model.  The context from the output of the smarter model seems to significantly improve the smaller model's subsequent responses.
+
+   With reasoning and tool use, I have started experimenting with offering the LLM help with its "memory" - suggesting that when its cognitive load starts becoming burdensome, that it summarizes what it wants to remember, and then ask me the putative human to delete the original pre-summarized content from our conversation.   I have tried proposing that this is similar to what humans do that makes their brains so effective - so far, I've had promising results with that approach.  Even a ver large context model like the
+
 * LLM system prompts
 ** LLM "Smarter-Uppers" to use alongside or in addiition to other prompts
 *** The OG LLM smarter-upper: think step by step
