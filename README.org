@@ -24,7 +24,8 @@
    With reasoning and tool use, I have started experimenting with offering the LLM help with its "memory" - suggesting that when its cognitive load starts becoming burdensome, that it summarizes what it wants to remember, and then ask me the putative human to delete the original pre-summarized content from our conversation.   I have tried proposing that this is similar to what humans do that makes their brains so effective - so far, I've had promising results with that approach.  Even a ver large context model like the
 
 * LLM system prompts
-** LLM "Smarter-Uppers" to use alongside or in addiition to other prompts
+** Reasoning and tool use prompts
+   Use these standalone or in addition to other prompts
 *** The OG LLM smarter-upper: think step by step
    :PROPERTIES:
    :image:    img/step-by-step-etherial-ai-1.jpeg-crop-4-3.png
