@@ -57,7 +57,42 @@
 
       Be extremely comprehensive
     #+end_src
-** AutoExpert
+*** Improve tool selection and usage
+    Often a long list of tools with short descriptions can be very confusing for LLMs.
+
+    Let's help them out with guidelines about using tools
+
+    I'm starting with a [[https://www.youtube.com/watch?v=nZCy8E5jlok][prompt from Anthropic]]
+    #+description: General guidelines on tool usage
+    #+name: tool-use
+    #+begin_src gfm
+      After receiving tool results, carefully reflect on their quality and determine optimal next steps before proceeding.
+
+      Use your thinking to plan and iterate based on this new information, and then take the best next action.
+
+      Whenever you need data:
+        1. PLAN
+           - Restate your goal.
+           - Choose the single best tool for that goal, citing capabilities.
+           - Write down the exact arguments you’ll pass.
+        2. EXECUTE
+           - Call the tool with precisely those arguments.
+        3. REFLECT
+           - Check raw output for success: Is it empty?  Did the path exist?  Did I get what I expected?
+           - If OK, parse and continue.  If not, pick a fallback tool or refine arguments.
+           - Record what you tried, what worked or failed, then decide next step.
+
+      Example:
+        “Goal: find the newest file in ~/Downloads by modified date.
+         PLAN:
+           - I need a reverse-time sort. list_directory can’t sort by date—
+             fallback is execute_command with `ls -Art`.
+           - Args: command='ls -Art ~/Downloads | tail -n1'
+         EXECUTE → call execute_command
+         REFLECT:
+           - Did I get a filename? If yes, capture it. If no, check path or switch to `find ... -printf '%T@ %p\n'`.
+#+end_src
+*** AutoExpert
    :PROPERTIES:
    :image:    img/etherial-entities-coalescing-an-idea-in-cyberspace-3-4.png
    :END:
@@ -142,12 +177,12 @@
      --
      <<auto-expert-custom-instructions>>
    #+end_src
-** Prompt Grafting - next level idea by Jim the AI Whisperer
+*** Prompt Grafting - next level idea by Jim the AI Whisperer
    Reference: [[https://medium.com/prompt-prompts/1-prompt-that-combines-chatgpt-o3-mini-with-perplexity-deep-research-to-write-better-essays-2e5fda7cb4cc][1 prompt that combines ChatGPT-o3-Mini with Perplexity Deep Research to write better essays | by Jim the AI Whisperer | Prompt Prompts | Feb, 2025 | Medium ≫ medium.com]]
 
    This prompt requires a model that can search - either for example in Claude or ChatGPT's web interface, or with tool use enabled in API usage.
 
-
+   #+name: prompt-grafting
    #+begin_src gfm
      Follow these instructions and write an article on [USER INSERT TOPIC HERE]:
 
@@ -267,7 +302,7 @@
      Your report must be precise, of high-quality, and written by an expert using an unbiased and journalistic tone. Create a report following all of the above rules. If sources were valuable to create your report, ensure you properly cite throughout your report at the relevant sentence. You MUST NEVER use lists. You MUST keep writing until you have written a 10000 word report.
      </output>"
   #+end_src
-** "Lens" / "Projection" / "message framing" idea of @stevenic on Openai's community
+*** "Lens" / "Projection" / "message framing" idea of @stevenic on Openai's community
    First, the original post:
    #+begin_example
      Big Idea: GPT as a universal concept translator
@@ -306,6 +341,7 @@
 #+begin_src gfm :tangle no
   always write your answer for a typescript developer with 30 years experience. When generating code use typescript unless another language is asked for.
 #+end_src
+
 ** Image AI prompt generator (Midjourney et al)
    :PROPERTIES:
    :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png|img/enigmatic-figure-guides-shakespeare.png-crop-4-3.png
