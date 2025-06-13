@@ -4,7 +4,7 @@
 <!--    :END: -->
 <!--    A David Shapiro original - here modified to lean more to DallE-3 -->
 
-<!--    I used this prompt to generate the images in this very presentation (if you're using my =org-powerslides= package) -->
+<!--    I used this prompt to generate the images in this very presentation back in the day (if you're using my =org-powerslides= package) -->
 
 <!--    #+description: Helps brainstorm ideas for MJ prompts to be used with AI image generators -->
 <!--    #+name: midjourney-prompter -->

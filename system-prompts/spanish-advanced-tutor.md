@@ -4,10 +4,6 @@
 <!--    :END: -->
 <!--    Chat only in the language - for a more advanced learning experience. -->
 
-<!--    For me, I have achieved stunningly better results with GPT-4 or Llama 2 70b (togethercomputer/llama-2-70b-chat). -->
-
-<!--    I would love to find smaller open source models as trustworthy! -->
-
 <!--    #+description: Spanish language partner for helping with intermediate-to-advanced Spanish -->
 <!--    #+name: spanish-advanced-tutor -->
 
