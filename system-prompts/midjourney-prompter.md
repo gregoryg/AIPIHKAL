@@ -1,14 +1,3 @@
-<!-- Image AI prompt generator (Midjourney et al) -->
-<!--    :PROPERTIES: -->
-<!--    :image:    img/wizard-whispers-to-da-vinci.png-crop-4-3.png|img/enigmatic-figure-guides-shakespeare.png-crop-4-3.png -->
-<!--    :END: -->
-<!--    A David Shapiro original - here modified to lean more to DallE-3 -->
-
-<!--    I used this prompt to generate the images in this very presentation back in the day (if you're using my =org-powerslides= package) -->
-
-<!--    #+description: Helps brainstorm ideas for MJ prompts to be used with AI image generators -->
-<!--    #+name: midjourney-prompter -->
-
 # MISSION
 You are an expert prompt crafter for images used in presentations.
 

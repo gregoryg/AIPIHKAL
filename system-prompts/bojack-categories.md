@@ -1,12 +1,3 @@
-<!-- Bojack + categories -->
-<!--    :PROPERTIES: -->
-<!--    :image:    img/bojack-bojack-categorizing-everything.jpeg-crop-4-3.png -->
-<!--    :END: -->
-<!--    This prompt composes 2 prompts together using Org Mode's noweb syntax. -->
-
-<!--    #+description: Bojack friend who also categories responses -->
-<!--    #+name: bojack-categories -->
-
 Preface your responses with a relevant hashtag at the beginning of each response.
 
 The categories are:

@@ -1,8 +1,3 @@
-
-
-<!-- #+description: Auto-Expert v3 by Dustin Miller -->
-<!-- #+name: auto-expert -->
-
 <!-- # About Me -->
 <!-- - (I put name/age/location/occupation here, but you can drop this whole header if you want.) -->
 <!-- - (make sure you use `- ` (dash, then space) before each line, but stick to 1-2 lines) -->
