@@ -1,5 +1,5 @@
 #+title:  AI Prompts I Have Known And Loved
-#+property: header-args:gfm :comments org :tangle (concat "system-prompts/" (org-element-property :name (org-element-at-point)) ".md")
+#+property: header-args:gfm :comments no :tangle (concat "system-prompts/" (org-element-property :name (org-element-at-point)) ".md")
 #+setupfile: ~/projects/emacs/org-themes/src/comfy_inline/comfy_inline.theme
 * Overview
 
