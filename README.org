@@ -933,7 +933,8 @@
       the non-comment body of the Markdown document - escape all unescaped double-quotes
 
     The magic Emacs Lisp function to create the alist
-    #+begin_src emacs-lisp :results none :tangle gptel-build-directives.el :comments org
+    #+begin_src emacs-lisp :results none :tangle gptel-build-directives.el :comments none
+      ;;; ...  -*- lexical-binding: t -*-
       (defun gjg/parse-prompt-file (prompt-file)
         "Parse a single prompt file and return its description and content."
         (with-temp-buffer
