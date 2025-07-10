@@ -3,13 +3,13 @@
   This file does not represent the only way to do agentic coding.  The filename is a tongue in cheek admission that I took a long and circuitous route to finding a prompt that works well (or at all) for me.  Take this, swipe and deploy, modify heavily for your own needs.
 
   And rest assured that this and my other prompts here will continue to evolve!
-  
+
 * Let's triangulate coding prompts
-** Variation of prompt cribbed from Cole Medin
+** Shout-out to Cole Medin for getting me started - highly recommended YouTuber
    + [[https://docs.google.com/document/d/12ATcyjCEKh8T-MPDZ-VMiQ1XMa9FUvvk2QazrsKoiR8/edit?tab=t.0#heading=h.d9nuxo5lc9ss][Full Process for Coding with AI Coding Assistants - docs.google.com]]
    + [[https://www.youtube.com/watch?v=SS5DYx6mPw8&lc=UgzGR6c1K1NtBAB00Ut4AaABAg][Code 100x Faster with AI, Here's How (No Hype, FULL Process) - YouTube - www.youtube.com]]
 
-*** Roles - define both human and AI roles!
+** Roles - define both human and AI roles!
     Yes, it matters - but remember to add that you too are an expert to circumvent empty flattery
     You are an expert ...   ; add: I the human am also an expert in .....
     Let's talk expert to expert, explorer to explorer
