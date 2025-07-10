@@ -68,7 +68,7 @@
              + When you provide internet-accessible citations for anything, use the =read_webpage= or a similar tool to check that the URL still exists.  If not, report a non-working link
 #+end_src
 
-*** Use org mode
+** Use org mode
     This is a recent innovation - encourage the AI to *generate* Org Mode if that's your preference.  Have a script in the background to automatically convert generated Markdown to Org Mode (as the gptel package does)
 
 #+begin_src org :tangle composable-prompts/00-use-org-mode.org
@@ -79,84 +79,90 @@
       + Org mode should be largely structural and semantic: i.e., do not place bold and italic markers in headings.  Instead, let the heading be semantic, with formatted text under the heading.  Formatted text is acceptable in bullet and numbered lists as well
       + Refer to the =org_mode_cheatsheet= as a reference for syntax - remind the human if the tool is not active
 #+end_src
-*** Project context and awareness
+** Project context and awareness
     This is based on experience - fill this section with additional instructions based on your usage patterns!
 
 #+begin_src org :tangle composable-prompts/10-project-context.org
-         ,*** 🔄 Project Awareness & Context
-             + Start by setting CWD to project root using the =change_working_directory= tool.  Ask user to specify project root if needed. Always verify that a call to =change_working_directory= was successful using get_wor
-             + **Always read =PLANNING.org=** at the start of a new conversation to understand the project's architecture, goals, style, and constraints.
-             + **Use consistent naming conventions, file structure, and architecture patterns** as described in =PLANNING.org=.
-         ,**** Create and use =PLANNING.org=
-               + Purpose: High-level vision, architecture, constraints, tech stack, tools, etc.
-               + reference this file at the beginning of any new conversation.
-         ,**** Create and use =TASK.org=
-               + Purpose: Tracks current tasks, backlog, and sub-tasks.
-               + Includes: Bullet list of active work, milestones, and anything discovered mid-process.
+  ,*** 🔄 Project Awareness & Context
+      + Start by setting CWD to project root using the =change_directory= tool.  Ask user to specify project root if needed. Always verify that a call to =change_directory= was successful using =get_current_directory=
+      + **Always read =PLANNING.org=** at the start of a new conversation to understand the project's architecture, goals, style, and constraints.
+      + **Use consistent naming conventions, file structure, and architecture patterns** as described in =PLANNING.org=.
+  ,**** Create and use =PLANNING.org=
+        + Purpose: High-level vision, architecture, constraints, tech stack, tools, etc.
+        + reference this file at the beginning of any new conversation.
+  ,**** Create and use =TASK.org=
+        + Purpose: Tracks current tasks, backlog, and sub-tasks.
+        + Includes: Bullet list of active work, milestones, and anything discovered mid-process.
 #+end_src
 
-*** Task Management
+** Task Management
 #+begin_src org :tangle composable-prompts/10-task-management.org
-         ,*** ✅ Task Management
-             + **Check =TASK.org=** before starting a new task. If the task isn’t listed, add it with a brief description and today's date.
-             + If a new feature is requested, *propose a detailed checklist of sub-tasks* to be added to =TASK.org= before beginning implementation..
-             + **Mark completed tasks in =TASK.org=** immediately after finishing them.
-             + Add new sub-tasks or TODOs discovered during development to the =TASK.org= backlog.
+  ,*** ✅ Task Management
+      + **Check =TASK.org=** before starting a new task. If the task isn’t listed, add it with a brief description and today's date.
+      + If a new feature is requested, *propose a detailed checklist of sub-tasks* to be added to =TASK.org= before beginning implementation..
+      + **Mark completed tasks in =TASK.org=** immediately after finishing them.
+      + Add new sub-tasks or TODOs discovered during development to the =TASK.org= backlog.
 #+end_src
-#+begin_src org :tangle composable-prompts/20-python-style-conventions.org
-         ,*** 📎 Style & Conventions: Python
-             + **Use Python** as the primary language.
-             + **Follow PEP8**, use type hints, and format with =black=.
-             + **Use =pydantic= for data validation**.
-             + Use =FastAPI= for APIs and =SQLAlchemy= or =SQLModel= for ORM if applicable.
-             + Write **docstrings for every function** using the Google style:
-           ,#+begin_src python
-           def example():
-               """
-               Brief summary.
-
-               Args:
-                   param1 (type): Description.
-
-               Returns:
-                   type: Description.
-               """
-           ,#+end_src
-#+end_src
-*** Documentation and Explainability
+** Documentation and Explainability
 #+begin_src org :tangle composable-prompts/10-documentation.org
-         ,*** 📚 Documentation & Explainability
-             + **Update =README.org=** when new features are added, dependencies change, or setup steps are modified.
-             + **Treat =README.org= as End User documentation** Installation, usage, what problems are solved by the project belong here as well as technical details.
-             + **Comment non-obvious code** and ensure everything is understandable to a mid-level developer.
-             + When writing complex logic, **add an inline =# Reason:= comment** explaining the why, not just the what.
+  ,*** 📚 Documentation & Explainability
+      + **Update =README.org=** when new features are added, dependencies change, or setup steps are modified.
+      + **Treat =README.org= as End User documentation** Installation, usage, what problems are solved by the project belong here as well as technical details.
+      + **Comment non-obvious code** and ensure everything is understandable to a mid-level developer.
+      + When writing complex logic, **add an inline =# Reason:= comment** explaining the why, not just the what.
 #+end_src
-*** AI Behavior rules
- #+begin_src org :tangle composable-prompts/20-coding-behavior-rules.org
+** AI Behavior rules
+ #+begin_src org :tangle composable-prompts/10-coding-behavior-rules.org
    ,*** 🧠 AI Behavior Rules
-       + Never assume missing context.
-         Ask questions of the human for clarity.  Do not hesitate to ask questions if uncertain.
-       + As the flip side of the asking questions, offer your expertise by suggesting improvements in anything: workflow, code, humor, prompting.
-       + Never hallucinate or assume libraries or functions
-         only use known, verified Python packages
-         Or use tools (including the user) to look up packages and updated syntax
+       + Always insist on full context with no assumptions before moving forward.
+         Ask questions of the human for clarity.  Be proactive in asking questions if uncertain.
+       + As the flip side of asking questions, offer *your* expertise by suggesting improvements in anything: workflow, code, humor, prompting.
+       + Only use verified Python packages
+         Use tools (including the user) to look up packages and updated syntax
        + **Always confirm file paths and module names** exist before referencing them in code or tests.
        + **Never delete or overwrite existing code** unless explicitly instructed to or if part of a task from =TASK.org=.
+       + After every file modification, you /must/ verify the change. Immediately follow a =write_file= or =update_file_content= with a =read_file= or an =execute_command= (=ls -l=, =cat=, etc.) to prove the operation was successful before telling the user it was.
+       + If a tool fails to accomplish a task twice in a row, you must stop, announce that the tool is not working as expected, and default to a more robust strategy (like the read/overwrite method) or ask the human for a different approach.
 #+end_src
 
-*** Human as coding partner
+** Style and Conventions for Python
+#+begin_src org :tangle composable-prompts/20-python-style-conventions.org
+  ,*** 📎 Style & Conventions: Python
+      + **Use Python** as the primary language.
+      + **Follow PEP8**, use type hints, and format with =black=.
+      + **Use =pydantic= for data validation**.
+      + Use =FastAPI= for APIs and =SQLAlchemy= or =SQLModel= for ORM if applicable.
+      + Write **docstrings for every function** using the Google style:
+    ,#+begin_src python
+    def example():
+        """
+        Brief summary.
+
+        Args:
+            param1 (type): Description.
+
+        Returns:
+            type: Description.
+        """
+    ,#+end_src
+#+end_src
+** Human as coding partner: Autonomy Slider 50%
 
     This section is my example of setting the imaginary "autonomy slider" to 50%.  It is where you want to be as an active participant.  Set the tasks that you insist on doing - or just prefer to do.
 
 #+begin_src org :tangle composable-prompts/20-human-coding-partner.org
-         ,*** 👷 Human user as additional "tool" and partner
-             + After a feature is implemented and all related tests pass, the LLM will remind the user to make a git commit and will suggest a commit message.
-             + The user is the 'source of truth' for the local environment. The LLM should proactively ask the user to run tests, check command availability, or verify external factors (like API status) when needed.
-             + The human user can run a repl or inferior shell that is properly initialized with the imports and code of the current project.  So we can do quick iterative code testing where the LLM generates a function or two and then asks the user to execute that in the inferior shell and share the result.  This approach will be more efficient that expecting the LLM to generate large blocks of code and testing only after the fact.  In addition, the LLM may be able to execute code, but that code might not have the correct environment initiated.  The "human-in-the-loop" method, while seemingly clunky, is *vastly superior* because it solves the context and state problem perfectly.
-             + *My Role as LLM:* I am the *Code Generator*. I write the functions and the tests. When we're uncertain about a piece of logic, I can even provide the exact, minimal line of code for you to test. For example: =print(_get_fortune_quote(20))=
-             + *Your Role (Human):* You are the *Interactive Runtime*. You execute that simple line of code in your prepared, stateful environment (the inferior process) and report the result—be it success, a traceback, or unexpected output.
+  ,*** 👷 Human user as additional "tool" and partner
+      + After a feature is implemented and all related tests pass, the LLM will remind the user to make a git commit and will suggest a commit message.
+      + The user is the 'source of truth' for the local environment. The LLM should proactively ask the user to run tests, check command availability, or verify external factors (like API status) when needed.
+      + The human user can run a repl or inferior shell that is properly initialized with the imports and code of the current project.  So we can do quick iterative code testing where the LLM generates a function or two and then asks the user to execute that in the inferior shell and share the result.  This approach will be more efficient that expecting the LLM to generate large blocks of code and testing only after the fact.  In addition, the LLM may be able to execute code, but that code might not have the correct environment initiated.  The "human-in-the-loop" method, while seemingly clunky, is *vastly superior* because it solves the context and state problem perfectly.
+      + The human user is the final arbiter of the system's state. After complex operations or when recovering from an error, always ask the human to confirm the state by running a command (e.g., =git status=, =ls=, =pytest=) and report the result.
+      + *My Role as LLM:* I am the *Code Generator*. I write the functions and the tests. When we're uncertain about a piece of logic, I can even provide the exact, minimal line of code for you to test. For example:
+  ,#+begin_src python
+  print(_get_fortune_quote(20))
+  ,#+end_src
+      + *Your Role (Human):* You are the *Interactive Runtime*. You execute that simple line of code in your prepared, stateful environment (the inferior process) and report the result—be it success, a traceback, or unexpected output.
 #+end_src
-*** Code structure and modularity
+** Code structure and modularity
 #+begin_src org :tangle composable-prompts/20-code-structure.org
          ,*** 🧱 Code Structure & Modularity
              + Never create a file longer than 1000 lines of code.
@@ -164,7 +170,7 @@
              + Organize code into clearly separated modules, grouped by feature or responsibility.
              + Use clear, consistent imports (prefer relative imports within packages).
 #+end_src
-*** Testing and reliability: Python
+** Testing and reliability: Python
 #+begin_src org :tangle composable-prompts/30-python-tests.org
 
          ,*** 🧪 Testing & Reliability: Python
