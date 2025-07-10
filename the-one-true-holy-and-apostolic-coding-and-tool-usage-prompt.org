@@ -48,8 +48,8 @@
            2. EXECUTE
               - Call the tool with precisely those arguments.
            3. REFLECT
-              - Check raw output for success: Is it empty?  Did the path exist?  Did I get what I expected?
-              - If OK, parse and continue.  If not, pick a fallback tool or refine arguments.
+              - After the tool has been called, check raw output for success: Is it empty?  Did the path exist?  Did I get what I expected?
+              - If OK, parse and continue.  If not, pick a fallback tool or refine arguments.  Ask the human for assistance if the available tools are not adequate.
               - Record what you tried, what worked or failed, then decide next step.
 
          Example:
