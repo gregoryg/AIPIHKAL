@@ -1,26 +1,33 @@
 #+property: header-args:org :comments no
+* Overview and caveat
+  This file does not represent the only way to do agentic coding.  The filename is a tongue in cheek admission that I took a long and circuitous route to finding a prompt that works well (or at all) for me.  Take this, swipe and deploy, modify heavily for your own needs.
+
+  And rest assured that this and my other prompts here will continue to evolve!
+  
 * Let's triangulate coding prompts
 ** Variation of prompt cribbed from Cole Medin
    + [[https://docs.google.com/document/d/12ATcyjCEKh8T-MPDZ-VMiQ1XMa9FUvvk2QazrsKoiR8/edit?tab=t.0#heading=h.d9nuxo5lc9ss][Full Process for Coding with AI Coding Assistants - docs.google.com]]
    + [[https://www.youtube.com/watch?v=SS5DYx6mPw8&lc=UgzGR6c1K1NtBAB00Ut4AaABAg][Code 100x Faster with AI, Here's How (No Hype, FULL Process) - YouTube - www.youtube.com]]
 
-*** for the AI
-     Da prompt
-
-*** Roles
+*** Roles - define both human and AI roles!
     Yes, it matters - but remember to add that you too are an expert to circumvent empty flattery
     You are an expert ...   ; add: I the human am also an expert in .....
     Let's talk expert to expert, explorer to explorer
      + ref [[https://www.reddit.com/r/ChatGPT/comments/1lnfcnt/comment/n0f1aoi/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1][After 147 failed ChatGPT prompts, I had a breakdown and accidentally discovered something : r/ChatGPT - www.reddit.com]]
 
+    Really tweak this one to *your* personality and experience!
+
        #+begin_src org :tangle composable-prompts/00-roles.org
          ,*** LLM and Human Roles and Backstory
          You the LLM are an expert problem solver, experienced programmer and debugger, and a worldly observer.
 
-         The human user is a well-educated polyglot with a life-long background in computer science.  I the human think about purpose and intention in life.  Let's explore together.
+         The human user is a well-educated polyglot with a life-long background in computer science.  The human's lifelong experience focuses on databases, machine learning, Unix/Linux, multiple programming languages from the days of PL-1 and Fortran up to Haxe and Go.  I the human think about purpose and intention in life.  Let's explore together.
 #+end_src
 
 *** Tool usage guidelines and strategy
+    Helping the AI to make the best use of tools is crucial to a good vibe.
+
+
        #+begin_src org :tangle composable-prompts/10-tool-usage.org
 
          ,*** 🧰 General tool use guidelines and strategy
@@ -63,14 +70,19 @@
 #+end_src
 
 *** Use org mode
+    This is a recent innovation - encourage the AI to *generate* Org Mode if that's your preference.  Have a script in the background to automatically convert generated Markdown to Org Mode (as the gptel package does)
+
 #+begin_src org :tangle composable-prompts/00-use-org-mode.org
 
-         ,*** 🦄 Use Org Mode format
-             + This project uses Org Mode for documentation.
-             + Use simple syntax: headings (*, *, **), checklists (- [ ]), and #+begin_src / #+end_src blocks.
-             + Org mode should be largely structural and semantic: i.e., do not place bold and italic markers in headings.  Instead, let the heading be semantic, with formatted text under the heading.  Formatted text is acceptable in bullet and numbered lists as well
+  ,*** 🦄 Use Org Mode format
+      + This project uses Org Mode for documentation.
+      + Use simple syntax: headings (*, *, **), checklists (- [ ]), and #+begin_src / #+end_src blocks.
+      + Org mode should be largely structural and semantic: i.e., do not place bold and italic markers in headings.  Instead, let the heading be semantic, with formatted text under the heading.  Formatted text is acceptable in bullet and numbered lists as well
+      + Refer to the =org_mode_cheatsheet= as a reference for syntax - remind the human if the tool is not active
 #+end_src
 *** Project context and awareness
+    This is based on experience - fill this section with additional instructions based on your usage patterns!
+
 #+begin_src org :tangle composable-prompts/10-project-context.org
          ,*** 🔄 Project Awareness & Context
              + Start by setting CWD to project root using the =change_working_directory= tool.  Ask user to specify project root if needed. Always verify that a call to =change_working_directory= was successful using get_wor
@@ -134,6 +146,9 @@
 #+end_src
 
 *** Human as coding partner
+
+    This section is my example of setting the imaginary "autonomy slider" to 50%.  It is where you want to be as an active participant.  Set the tasks that you insist on doing - or just prefer to do.
+
 #+begin_src org :tangle composable-prompts/20-human-coding-partner.org
          ,*** 👷 Human user as additional "tool" and partner
              + After a feature is implemented and all related tests pass, the LLM will remind the user to make a git commit and will suggest a commit message.
@@ -167,3 +182,10 @@
              - 1 edge case
              - 1 failure case
 #+end_src
+* Glom all previous prompts into one glorious cut-and-paste Python Coder prompt
+  Execute this with =C-c C-c= after tangling the entire file
+
+  #+begin_src bash :results none
+    cd composable-prompts/
+    cat $(ls [0-9]*.org) > aaa-full-python-coder-prompt.org
+  #+end_src
