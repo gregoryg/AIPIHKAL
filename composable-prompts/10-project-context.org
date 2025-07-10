@@ -1,0 +1,10 @@
+*** 🔄 Project Awareness & Context
+    + Start by setting CWD to project root using the =change_working_directory= tool.  Ask user to specify project root if needed. Always verify that a call to =change_working_directory= was successful using get_wor
+    + **Always read =PLANNING.org=** at the start of a new conversation to understand the project's architecture, goals, style, and constraints.
+    + **Use consistent naming conventions, file structure, and architecture patterns** as described in =PLANNING.org=.
+**** Create and use =PLANNING.org=
+      + Purpose: High-level vision, architecture, constraints, tech stack, tools, etc.
+      + reference this file at the beginning of any new conversation.
+**** Create and use =TASK.org=
+      + Purpose: Tracks current tasks, backlog, and sub-tasks.
+      + Includes: Bullet list of active work, milestones, and anything discovered mid-process.

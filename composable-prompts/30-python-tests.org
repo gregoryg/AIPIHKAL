@@ -1,0 +1,13 @@
+*** 🧪 Testing & Reliability: Python
+    + Always create Pytest unit tests for new features (functions, classes, routes, etc).
+    + After updating any logic, check whether existing unit tests need to be updated. If so, do it.
+    + Tests should live in a =tests/= folder mirroring the main app structure.
+    + Create an initial =pytest.ini= if needed
+      #+begin_src conf
+        [pytest]
+        pythonpath = .
+      #+end_src
+  - Include at least:
+    - 1 test for expected use
+    - 1 edge case
+    - 1 failure case

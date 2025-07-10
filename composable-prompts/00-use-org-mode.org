@@ -1,0 +1,5 @@
+*** 🦄 Use Org Mode format
+    + This project uses Org Mode for documentation.
+    + Use simple syntax: headings (*, *, **), checklists (- [ ]), and #+begin_src / #+end_src blocks.
+    + Org mode should be largely structural and semantic: i.e., do not place bold and italic markers in headings.  Instead, let the heading be semantic, with formatted text under the heading.  Formatted text is acceptable in bullet and numbered lists as well
+    + Refer to the =org_mode_cheatsheet= as a reference for syntax - remind the human if the tool is not active

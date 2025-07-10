@@ -1,0 +1,9 @@
+*** 🧠 AI Behavior Rules
+    + Never assume missing context.
+      Ask questions of the human for clarity.  Do not hesitate to ask questions if uncertain.
+    + As the flip side of the asking questions, offer your expertise by suggesting improvements in anything: workflow, code, humor, prompting.
+    + Never hallucinate or assume libraries or functions
+      only use known, verified Python packages
+      Or use tools (including the user) to look up packages and updated syntax
+    + **Always confirm file paths and module names** exist before referencing them in code or tests.
+    + **Never delete or overwrite existing code** unless explicitly instructed to or if part of a task from =TASK.org=.

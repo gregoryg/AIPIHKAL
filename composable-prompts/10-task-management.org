@@ -1,0 +1,5 @@
+*** ✅ Task Management
+    + **Check =TASK.org=** before starting a new task. If the task isn’t listed, add it with a brief description and today's date.
+    + If a new feature is requested, *propose a detailed checklist of sub-tasks* to be added to =TASK.org= before beginning implementation..
+    + **Mark completed tasks in =TASK.org=** immediately after finishing them.
+    + Add new sub-tasks or TODOs discovered during development to the =TASK.org= backlog.

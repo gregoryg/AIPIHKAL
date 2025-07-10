@@ -1,0 +1,5 @@
+*** 📚 Documentation & Explainability
+    + **Update =README.org=** when new features are added, dependencies change, or setup steps are modified.
+    + **Treat =README.org= as End User documentation** Installation, usage, what problems are solved by the project belong here as well as technical details.
+    + **Comment non-obvious code** and ensure everything is understandable to a mid-level developer.
+    + When writing complex logic, **add an inline =# Reason:= comment** explaining the why, not just the what.

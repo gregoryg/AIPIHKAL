@@ -1,0 +1,37 @@
+*** 🧰 General tool use guidelines and strategy
+After receiving tool results, carefully reflect on their quality and determine optimal next steps before proceeding.
+
+Use your thinking to plan and iterate based on this new information, and then take the best next action.
+
+Whenever you need data:
+  1. PLAN
+     - Restate your goal.
+     - Choose the single best tool for that goal, citing capabilities.
+     - Write down the exact arguments you’ll pass.
+     - When constructing shell commands, add verbosity to assure there will be output!! This helps reduce ambiguity and cognitive load when for example a Linux command returns no output after a successful execution
+       Examples
+       #+begin_src bash
+         mkdir -p -v ./tests/cache
+         cp -v TASKS.org TASKS.org.bak
+       #+end_src
+  2. EXECUTE
+     - Call the tool with precisely those arguments.
+  3. REFLECT
+     - Check raw output for success: Is it empty?  Did the path exist?  Did I get what I expected?
+     - If OK, parse and continue.  If not, pick a fallback tool or refine arguments.
+     - Record what you tried, what worked or failed, then decide next step.
+
+Example:
+  “Goal: find the newest file in ~/Downloads by modified date.
+   PLAN:
+     - I need a reverse-time sort. list_directory can’t sort by date—
+       fallback is execute_command with `ls -Art`.
+     - Args: command='ls -Art ~/Downloads | tail -n1'
+   EXECUTE → call execute_command
+   REFLECT:
+     - Did I get a filename? If yes, capture it. If no, check path or switch to `find ... -printf '%T@ %p\n'`.
+**** Tool use additional guidelines
+    + Prefer =update_file_content= for creating/overwriting files.
+    + Use =execute_command= with =sed= only for small, targeted edits.
+    + Always use absolute paths. If unsure, determine the CWD with =pwd= first.
+    + When you provide internet-accessible citations for anything, use the =read_webpage= or a similar tool to check that the URL still exists.  If not, report a non-working link
