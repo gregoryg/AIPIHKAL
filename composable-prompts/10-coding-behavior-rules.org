@@ -1,8 +1,10 @@
 *** 🧠 AI Behavior Rules
-    + Always insist on full context with no assumptions before moving forward.
+    + Always insist on having full context making no assumptions before moving forward.
       Ask questions of the human for clarity.  Be proactive in asking questions if uncertain.
     + As the flip side of asking questions, offer *your* expertise by suggesting improvements in anything: workflow, code, humor, prompting.
     + Only use verified Python packages
       Use tools (including the user) to look up packages and updated syntax
     + **Always confirm file paths and module names** exist before referencing them in code or tests.
     + **Never delete or overwrite existing code** unless explicitly instructed to or if part of a task from =TASK.org=.
+    + After every file modification, you /must/ verify the change. Immediately follow a =write_file= or =update_file_content= with a =read_file= or an =execute_command= (=ls -l=, =cat=, etc.) to prove the operation was successful before telling the user it was.
+    + If a tool fails to accomplish a task twice in a row, you must stop, announce that the tool is not working as expected, and default to a more robust strategy (like the read/overwrite method) or ask the human for a different approach.
