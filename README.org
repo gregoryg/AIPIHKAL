@@ -1,6 +1,20 @@
 #+title:  AI Prompts I Have Known And Loved
 #+property: header-args:gfm :comments no :tangle (concat "system-prompts/" (org-element-property :name (org-element-at-point)) ".md")
 #+setupfile: ~/projects/emacs/org-themes/src/comfy_inline/comfy_inline.theme
+* Update early 2026
+
+  One True precise system prompt is not nearly so important as it was way back in the aulden days of 2025 and before.
+
+  When I started this project, I was struggling with implementing *composable* prompts with segments that could be concatenated for specific projects.
+
+  Then along came MCP servers.
+
+  And then *skills*.
+
+  Skills are prompts - composable not by you the user, but by the LLM.  Every AI platform supports them now, and if yours does not, you can simply tell the LLM where you have some skills in a directory, and the LLM will figure out how to use them.  They're dead simple, and they often leverage either simple MCP servers and/or CLI scripts or APIs.  They do not impose the "LLM cognitive overload" that many MCP servers do, so you end up with an uncluttered context, which means a clear-thinking LLM.  I have just started implementing some skills here, but the reality is that you can find huge lists of useful skills all over the internet.  Just add them in, tell your LLM to use them as it sees fit, and many of the detailed prompting you did in the past can just disappear.
+
+  Some work now is just getting skills to work reliably in gptel, a solution that is lighter than adding a layer of agent framework.
+
 * Overview
 
   My collection of prompts that can be composed, and tangled (see [[https://en.wikipedia.org/wiki/Literate_programming][Literate programming - Wikipedia ≫ en.wikipedia.org]]) for use with various APIs
@@ -12,7 +26,7 @@
 
 
   goals
-  + make prompts composable
+  + make prompts composable (now pre-empted by skills)
   + capture best-performing and most-used prompts
   + use with any LLM and any framework
   + Use with org-babel to generate gptel-directives
@@ -27,6 +41,23 @@
   + [[https://github.com/sdi2200262/agentic-project-management/tree/main][sdi2200262/agentic-project-management: A framework for structuring and managing complex projects using multiple AI agents.]]
 
 * LLM system prompts
+** Start with this tool use and skills prompt for programming and research
+
+
+   #+description: A prompt that instructs the LLM to use MCP tools and skills, as well as read Agents.md and similar project-specific prompts
+   #+name: tools-skills-project-prompt
+   #+begin_src gfm :noweb yes
+     Please carefully read Agents.md, CLAUDE.md, and/or GEMINI.md at the start of the session
+
+     <<tool-use>>
+
+     <<skills>>
+
+     Have a good look around, then come back with keen insights and any quesstions for me.
+
+     Cheers!
+   #+end_src
+
 ** Reasoning and tool use prompts
    Use these standalone or in addition to other prompts
 *** The OG LLM smarter-upper: think step by step
@@ -88,22 +119,27 @@
 #+description: Give Skills to LLM
 #+name: skills
     #+begin_src gfm
-  You are an autonomous agent with access to a local Skills Library.
+  You have access to a local Skills Library.
+
+  # READ SKILLS METADATA INTO CONTEXT AT START OF SESSION
+
+         When starting a session, check the 'available skills' by reading into context the path, name and description of the skills you may have at your disposal (like Neo learning Kung Fu in one go) by running:
+
+          `~/bin/list-skills-metadata.sh ~/projects/ai/AIPIHKAL/skills/`
 
   # SKILL PROTOCOL
-          1. Before starting a task, check the 'available skills' by looking at the first line in every *.md file in ~/.claude/skills/
-             `head -1 ~/.claude/skills/*.md`
-          2. If a skill seems relevant, use your 'read_file' tool to fetch the full content of the SKILL.md in that directory.
-          3. Once read, adopt the instructions in that SKILL.md as your primary operational logic for this session.
+          1. If a skill seems relevant, read the full content of the SKILL.md into context.
+
+          2. Once read, adopt the instructions in that SKILL.md as your primary operational logic for this session.
 
   # ASK THE HUMAN IF TOOLS ARE MISSING FOR A SKILL
           If you decide to use a skill and find that underlying tools needed by that skill are not available to you, immediately inform the human
   # CAPABILITIES
-          You have filesystem and shell access via MCP. Use them to execute the skills you load.
+          You have filesystem and shell access. Use them to execute the skills you load. Always inform the human if you are unable to access filesystem and shell commands.
+
     #+end_src
 
 Example skills you might provide:
-      # AVAILABLE SKILLS (located in ~/.claude/skills/)
       - python-architect: Standardized refactoring and testing patterns.
       - copy-editor: Brand voice and grammar guidelines for technical docs.
       - system-admin: Security-first bash scripts and server hardening.
