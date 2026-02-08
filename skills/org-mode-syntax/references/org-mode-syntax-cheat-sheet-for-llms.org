@@ -1,0 +1,105 @@
+#+title: Org Mode Syntax Cheat Sheet (for LLMs)
+#+options: toc:nil
+
+# Adapted from http://karl-voit.at/2017/09/23/orgmode-as-markup-only/
+
+* Headings
+
+* Top Level Heading
+** Second Level Heading
+*** Third Level Heading
+
+* Comments
+
+# A comment line. This line will not be exported.
+
+* Paragraphs
+
+Paragraphs are separated by at least one empty line.
+
+* Emphasis
+
+*bold* /italic/ _underlined_ +strikethrough+ =monospaced=
+
+* Links
+
+[[https://nickhigham.wordpress.com/][Link description]]
+
+https://nickhigham.wordpress.com/ A link without a description.
+
+A DOI (digital object identifier) link:
+[[doi:10.1093/comnet/cnv016][Matching Exponential-Based and Resolvent-Based Centrality Measures]]
+
+* Horizontal line
+
+-----
+
+* Lists
+
+- First item in a list.
+- Second item.
+  - Sub-item
+    1. Numbered item.
+    2. Another item.
+- [ ] Item yet to be done.
+- [X] Item that has been done.
+
+* Inline LaTeX
+
+LaTeX macros can be included: $x_2 = \alpha + \beta^2 - \gamma$.
+
+* Todo keywords (example)
+
+**** TODO A todo item.
+**** DONE A todo item that has been done.
+
+* Quote blocks
+
+#+begin_quote
+This text will be indented on both the left margin and the right margin.
+#+end_quote
+
+* Verbatim lines
+
+: Text to be displayed verbatim (as-is), without markup
+: (*bold* does not change font), e.g., for source code.
+: Line breaks are respected.
+
+* Source blocks
+
+Some MATLAB source code:
+
+#+begin_src matlab
+>> rand(1,3)
+ans =
+   5.5856e-01   7.5663e-01   9.9548e-01
+#+end_src
+
+Some arbitrary text to be typeset verbatim in monospace font:
+
+#+begin_src text
+Apples, oranges,
+cucumbers, tomatoes
+#+end_src
+
+* Tables + spreadsheet formulas
+
+# The column headed "Ratio" is automatically
+# calculated by hitting C-c C-c in Emacs on the #+TBLFM line.
+
+|----------------+-----------+-----------+-------|
+| Country        | Abstracts | Downloads | Ratio |
+|----------------+-----------+-----------+-------|
+| United States  |         7 |       497 |  71.0 |
+| Unknown        |         4 |        83 |  20.8 |
+| United Kingdom |         3 |        41 |  13.7 |
+| Germany        |         3 |        29 |   9.7 |
+| Netherlands    |         2 |        21 |  10.5 |
+| Japan          |         1 |        18 |  18.0 |
+|----------------+-----------+-----------+-------|
+#+tblfm: $4=$3/$2;%.1f
+
+* Images
+
+Include an image:
+file:nickhighamwordpress.jpg
