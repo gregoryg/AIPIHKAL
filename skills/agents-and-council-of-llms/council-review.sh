@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# duck-review.sh: Democratic Peer Review Tool for the Council
-# Usage: ./duck-review.sh --session "skills/agents-and-council-of-llms/transcripts/..." [--reviewers "Lens1,Lens2"] [--model "..."]
+# council-review.sh: Democratic Peer Review Tool for the Council
+# Usage: ./council-review.sh --session "skills/agents-and-council-of-llms/transcripts/..." [--reviewers "Lens1,Lens2"] [--model "..."]
 
 # Robust Directory Resolution
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -47,11 +47,11 @@ if [ -f "$METADATA_FILE" ]; then
     # NOTE: This is brittle for multi-line problems, but sufficient for now.
     FOUND_PROBLEM=$(grep "^Problem:" "$METADATA_FILE" | head -n 1 | cut -d' ' -f2-)
     if [ ! -z "$FOUND_PROBLEM" ]; then PROBLEM="$FOUND_PROBLEM"; fi
-    
+
     # Try to find original lenses if REVIEWERS not set
     if [ -z "$REVIEWERS" ]; then
         FOUND_LENSES=$(grep "^Lenses:" "$METADATA_FILE" | head -n 1 | cut -d' ' -f2-)
-        if [ ! -z "$FOUND_LENSES" ]; then 
+        if [ ! -z "$FOUND_LENSES" ]; then
             REVIEWERS="$FOUND_LENSES"
             echo "Auto-detected original council members for review: $REVIEWERS"
         fi
@@ -81,13 +81,13 @@ for f in $(ls "$SESSION_DIR"/*.md | sort); do
     if [[ "$filename" == "FULL_TRANSCRIPT.md" ]]; then continue; fi
     if [[ "$filename" == "PEER_REVIEW.md" ]]; then continue; fi
     if [[ "$filename" == *"_REVIEW.md" ]]; then continue; fi
-    
+
     # Assign Letter
     LABEL="${LETTERS[$LETTER_INDEX]}"
     echo "$LABEL: $filename" >> "$KEY_FILE"
-    
+
     CONTENT=$(cat "$f")
-    
+
     ANON_TEXT+="
 ---
 ### RESPONSE $LABEL
@@ -119,10 +119,10 @@ for reviewer in "${ADDR[@]}"; do
     PROMPT="${PROMPT//\{\{PROBLEM\}\}/$PROBLEM}"
     PROMPT="${PROMPT//\{\{CONTEXT\}\}/$CONTEXT}"
     PROMPT="${PROMPT//\{\{RESPONSES\}\}/$ANON_TEXT}"
-    
+
     # Output file for this specific review
     OUTPUT_FILE="$SESSION_DIR/${reviewer// /_}_REVIEW.md"
-    
+
     # Execute
     opencode run "$PROMPT" --model "$MODEL" > "$OUTPUT_FILE" 2>&1 &
     pids+=($!)
@@ -143,7 +143,7 @@ echo "" >> "$AGGREGATE_FILE"
 for reviewer in "${ADDR[@]}"; do
     reviewer=$(echo "$reviewer" | xargs)
     OUTPUT_FILE="$SESSION_DIR/${reviewer// /_}_REVIEW.md"
-    
+
     echo "## Review by: $reviewer" >> "$AGGREGATE_FILE"
     if [ -f "$OUTPUT_FILE" ]; then
         cat "$OUTPUT_FILE" >> "$AGGREGATE_FILE"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# duck-council.sh: The Council of LLMs Solicitation Tool
-# Usage: ./duck-council.sh --problem "..." --lenses "..." --context "..."
+# council-convene.sh: The Council of LLMs Solicitation Tool
+# Usage: ./council-convene.sh --problem "..." --lenses "..." --context "..."
 
 # Robust Directory Resolution
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
