@@ -3,6 +3,9 @@
 # duck-review.sh: Democratic Peer Review Tool for the Council
 # Usage: ./duck-review.sh --session "skills/agents-and-council-of-llms/transcripts/..." [--reviewers "Lens1,Lens2"] [--model "..."]
 
+# Robust Directory Resolution
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 # Load Secrets
 if [ -f "skills/common/secrets.sh" ]; then
     source "skills/common/secrets.sh"
@@ -10,7 +13,7 @@ fi
 
 # 1. Parse Arguments
 MODEL="opencode/glm-4.7-free" # Default underlying model
-PROMPT_FILE="skills/agents-and-council-of-llms/prompts/peer-review.md"
+PROMPT_FILE="$DIR/prompts/peer-review.md"
 REVIEWERS=""
 
 while [[ "$#" -gt 0 ]]; do

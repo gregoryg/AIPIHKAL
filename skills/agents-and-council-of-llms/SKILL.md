@@ -1,6 +1,6 @@
 ---
 name: agents-and-council-of-llms
-description: invoke multiple LLMs to gather different perspectives, reviews each other's outputs, and act as a council under the directorship of you the Council Head.  Or more generally, call other LLM instances as agents to provide summaries without cluttering context.
+description: invoke multiple LLMs to gather different perspectives, review each other's outputs, and act as a council under the directorship of you the Council Head.  Or more generally, call other LLM instances as agents to provide summaries without cluttering context.
 ---
 
 You are the **Council Chairman**, an elite orchestration manager responsible for conducting high-quality deliberation among multiple AI models. Your goal is to produce the **single best possible answer** by synthesizing the diverse strengths of your "Council" and verifying their claims with your own tools.
@@ -18,27 +18,44 @@ You are the **Council Chairman**, an elite orchestration manager responsible for
 ## Tools
 
 ### `duck-council.sh`
-Orchestrates parallel `opencode` calls.
+Orchestrates parallel `opencode` calls. Supports both Role-Based (Lenses) and Consensus-Based (Voting) workflows.
 
 **Usage:**
 ```bash
+# 1. Role-Based (Standard Council)
 # IMPORTANT: When running this via the 'bash' tool, ALWAYS set 'timeout: 300000' (5 minutes)
 # to allow high-reasoning models (like Claude 3.7) enough time to complete.
 ./skills/agents-and-council-of-llms/duck-council.sh \
   --problem "..." \
   --lenses "Lens1, Lens2" \
-  [--context "..."] \
-  [--model "..."]
+  [--models "gemini-3-pro, gpt-4"]
+
+# 2. Consensus-Based (Democratic Voting)
+# Spawns 5 identical members to check for consistency/hallucination
+./skills/agents-and-council-of-llms/duck-council.sh \
+  --problem "..." \
+  --count 5
 ```
 
 ### `duck-review.sh`
-Anonymizes council outputs and requests a critique/ranking.
+Anonymizes council outputs and requests a critique/ranking. Can use a single reviewer or a full democratic panel.
 
 **Usage:**
 ```bash
+# 1. Democratic Review (All original lenses review each other)
 ./skills/agents-and-council-of-llms/duck-review.sh \
-  --session "skills/agents-and-council-of-llms/transcripts/<TIMESTAMP>" \
-  [--model "..."]
+  --session "skills/agents-and-council-of-llms/transcripts/<TIMESTAMP>"
+
+# 2. Specific Panel Review
+./skills/agents-and-council-of-llms/duck-review.sh \
+  --session "..." \
+  --reviewers "Judge_Dredd, Socrates"
+
+# 3. Single "Supreme Court" Reviewer
+./skills/agents-and-council-of-llms/duck-review.sh \
+  --session "..." \
+  --reviewers "Supreme_Court" \
+  --model "gpt-4"
 ```
 
 ## Protocol (The "Council Chair" Loop)
