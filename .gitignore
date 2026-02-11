@@ -2,3 +2,6 @@ gptel-build-directives.el
 uncropped-images/**
 .env
 skills/agents-and-council-of-llms/transcripts/
+**/*.org_archive
+**/test-skills*.org
+.dir-locals.el
