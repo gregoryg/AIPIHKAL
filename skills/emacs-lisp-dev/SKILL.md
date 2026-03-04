@@ -39,9 +39,11 @@ emacs --batch \
 
 ## Critical Safety Patterns
 
-### Buffer-Local Variable Capture
+### Buffer-Local Variable Capture (incl. "shadows global")
 
-Buffer-local variables are **lost** when entering `with-current-buffer` or `with-temp-buffer`. Capture them BEFORE switching:
+Buffer-local variables can surprise you in two ways:
+
+1) **Scope switch**: buffer-locals are tied to the *current buffer*. If you switch buffers with `with-current-buffer` / `with-temp-buffer`, you are now reading the *other buffer's* local value (often nil). Capture them BEFORE switching:
 
 ```emacs-lisp
 ;; WRONG - my-local-var is nil in temp buffer
@@ -52,6 +54,18 @@ Buffer-local variables are **lost** when entering `with-current-buffer` or `with
 (let ((val my-local-var))
   (with-temp-buffer
     (insert (format "%s" val))))
+```
+
+2) **Shadowing**: when a variable is buffer-local, the local value **shadows** the global value in that buffer. This means you **do not get an automatic "merge"** of global + local values unless you implement it.
+
+If you want "effective" values that combine a global list with a buffer-local extension, do something like:
+
+```emacs-lisp
+;; Example: combine a global allowlist with a buffer-local allowlist.
+(let* ((global (default-value 'my-allowed-directories))
+       (local  (and (local-variable-p 'my-allowed-directories)
+                    my-allowed-directories)))
+  (seq-uniq (append local global) #'equal))
 ```
 
 ### HTML/XML Parsing
