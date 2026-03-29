@@ -12,14 +12,16 @@ license: Complete terms in LICENSE.txt
 
 After writing or modifying a `.el` file:
 
-1. **Syntax check** (byte-compile as linter — do NOT leave `.elc` artifacts behind):
+1. If `emacs` is unavailable, or required dependencies cannot be loaded in batch, tell the user clearly and treat verification as incomplete.
+
+2. **Syntax check** (byte-compile as linter — do NOT leave `.elc` artifacts behind):
    ```bash
    emacs --batch -L <deps> -L . --eval '(byte-compile-file "FILE.el")'
    rm -f FILE.elc   # clean up — stale .elc is a trap without (setq load-prefer-newer t)
    ```
    This catches unbalanced parens, unbound variables, and missing `require`s.
-2. **Load check**: `emacs --batch -L <deps> -L . --eval '(require (quote FEATURE))'`
-3. **Smoke test** (when practical): `emacs --batch -L <deps> --eval '(progn (require ...) (message "result: %s" (my-function "arg")))'`
+3. **Load check**: `emacs --batch -L <deps> -L . --eval '(require (quote FEATURE))'`
+4. **Smoke test** (when practical): `emacs --batch -L <deps> --eval '(progn (require ...) (message "result: %s" (my-function "arg")))'`
 
 If any step fails, **fix the code and re-test before responding**. You have shell access—use it.
 
