@@ -5,3 +5,7 @@ skills/agents-and-council-of-llms/transcripts/
 **/*.org_archive
 **/test-skills*.org
 .dir-locals.el
+# ignore 3rd-party skills
+skills/frontend-design/
+skills/skill-creator/
+skills/webapp-testing/
