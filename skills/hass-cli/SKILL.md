@@ -12,12 +12,12 @@ Control Home Assistant via the `hass-cli` Python CLI.
 **Binary location:** `~/.local/python-venvs/boodle/bin/hass-cli` (or see if it's in the path already with `which hass-cli`)
 
 **Secret Management (Secure Injection):**
-Load `HASS_TOKEN` from .env` or - if not there, load it securely:
+Load `HASS_TOKEN` from `.env` or - if not there - load it securely:
 
 ```bash
 source skills/common/secrets.sh
 load_hass_token
-export HASS_SERVER=http://172.16.17.7:8123  # Update if needed
+export HASS_SERVER=${HASS_SERVER:-http://172.16.17.7:8123}
 ```
 
 **Alternative (One-liner):**
@@ -25,145 +25,143 @@ export HASS_SERVER=http://172.16.17.7:8123  # Update if needed
 export HASS_TOKEN=$(gpg --decrypt ~/.authinfo.gpg 2>/dev/null | grep "machine ha-mcp-token" | awk '{for(i=1;i<=NF;i++) if($i=="password") print $(i+1)}')
 ```
 
-**Always export these variables** before running `hass-cli`.
+## Primary workflow: use the wrappers first
 
-## Quick Reference
+The raw Home Assistant registry model is often awkward for humans and LLMs:
 
-**Entity discovery:**
+- humans think “bar light”
+- Home Assistant areas often live on devices, not entities
+- many entities have `area_id: null`
+- turning something on still requires the final entity id
+
+In this repo, prefer the wrapper scripts in `skills/hass-cli/scripts/` before falling back to raw `hass-cli` discovery commands.
+
+### Wrapper scripts
+
+These scripts auto-load the token, set a default `HASS_SERVER` if one is not already exported, and return compact, decision-ready JSON.
+
+**Find likely matches for a human-ish phrase:**
 ```bash
-# List all entities (supports wildcards)
-hass-cli -o json entity list 'light.*'
-hass-cli -o json entity list 'switch.bar*'
+skills/hass-cli/scripts/ha-find "bar light"
+skills/hass-cli/scripts/ha-find "garage"
+```
 
-# Get current state + attributes
+**Show actionable entities in an area:**
+```bash
+skills/hass-cli/scripts/ha-area-summary "Bar"
+skills/hass-cli/scripts/ha-area-summary "Kitchen"
+```
+
+**Control a single resolved entity:**
+```bash
+skills/hass-cli/scripts/ha-on "bar light"
+skills/hass-cli/scripts/ha-off "bar light"
+```
+
+**Ask for compact status:**
+```bash
+skills/hass-cli/scripts/ha-status "garage"
+skills/hass-cli/scripts/ha-status "bar light"
+```
+
+### Wrapper behavior
+
+- `ha-find`
+  - searches both areas and entities
+  - returns multiple plausible matches instead of forcing one
+  - defaults to actionable domains (`light`, `switch`, `cover`)
+  - uses compact `best_matches` records by default so LLMs do not have to wade through low-value registry fields
+  - use `--include-all-domains` to include sensors and other informational entities
+
+- `ha-area-summary`
+  - resolves an area name/id
+  - lists actionable entities in that area with compact label/entity/state/device information
+
+- `ha-on` / `ha-off`
+  - resolve a human-ish phrase to actionable entities
+  - if exactly one strong match exists, perform the action
+  - if several equally strong matches exist, return them as JSON and do not act
+  - use `--all` for intentional multi-entity actions on all top-scoring matches
+  - for `cover` entities, maps on/off semantics to `open_cover` / `close_cover`
+
+- `ha-status`
+  - optimized for questions like “are the garage doors closed?”
+  - returns compact area and actionable-entity status without including non-actionable sensors by default
+
+## Important implementation note
+
+A very useful escape hatch is `hass-cli template`, which can access Home Assistant Jinja helpers such as:
+
+- `areas()`
+- `area_id("Bar")`
+- `area_devices("Bar")`
+- `area_entities("Bar")`
+- `area_name('light.bar_switch_light')`
+- `device_id('light.bar_switch_light')`
+
+Use this when raw `area list` / `device list` / `entity list` relationships get awkward.
+
+## Raw hass-cli fallback reference
+
+Use these when debugging or when the wrappers are not enough.
+
+### Entity discovery
+
+```bash
+hass-cli -o json entity list 'light.*'
+hass-cli -o json entity list 'switch.*'
 hass-cli -o json state list 'light.bar*'
 ```
 
-**Control entities:**
-```bash
-# Direct control commands (preferred for simple on/off/toggle)
-hass-cli state turn_on light.bar_switch_light
-hass-cli state turn_off light.living_room
-hass-cli state toggle switch.porch
+### Areas and organization
 
-# Service calls (for parameters or services without direct commands)
-hass-cli service call light.turn_on --arguments entity_id=light.bar_switch_light
-hass-cli service call climate.set_temperature --arguments entity_id=climate.bedroom,temperature=72
-```
-
-**Areas and organization:**
 ```bash
-# List areas
 hass-cli -o json area list
-
-# List devices
 hass-cli -o json device list
-```
-
-## Common Patterns
-
-**Find entities in an area:**
-```bash
-# 1. Get area_id from area list
-hass-cli -o json area list | jq -r '.[] | select(.name=="Bar") | .area_id'
-
-# 2. Filter entities by area_id (from entity metadata)
-hass-cli -o json entity list | jq '.[] | select(.area_id=="bar")'
-```
-
-**Get detailed state information:**
-```bash
-# State includes: current value, attributes, last_changed, last_updated
-hass-cli -o json state list 'light.bar_switch_light'
-```
-
-**Wildcard searches:**
-- `light.*` — all lights
-- `switch.bar*` — switches starting with "bar"
-- `sensor.*temperature*` — all temperature sensors
-- `climate.bedroom` — exact match
-
-## Output Formats
-
-**JSON** (preferred for structured data):
-```bash
 hass-cli -o json entity list
 ```
 
-**Table** (human-readable):
+### Direct control
+
 ```bash
-hass-cli -o table state list 'light.*'
+hass-cli state turn_on light.bar_switch_light
+hass-cli state turn_off light.bar_switch_light
+hass-cli service call light.turn_on --arguments entity_id=light.bar_switch_light
 ```
 
-**YAML**:
-```bash
-hass-cli -o yaml area list
-```
+### Services
 
-## Limitations
-
-**Broken commands:**
-- `hass-cli info` — Uses deprecated endpoint, will fail
-
-**Entity vs State:**
-- `entity list` — Registry metadata (area, device, platform, creation date)
-- `state list` — Current state + attributes (on/off, brightness, temperature, etc.)
-- Use `state list` for runtime information, `entity list` for organization
-
-## Service Calls
-
-**List available services:**
 ```bash
 hass-cli -o json service list
 ```
 
-**Common services by domain:**
-- `light.turn_on`, `light.turn_off`, `light.toggle`
-- `switch.turn_on`, `switch.turn_off`, `switch.toggle`
-- `climate.set_temperature`, `climate.set_hvac_mode`
+Common services include:
+- `light.turn_on`, `light.turn_off`
+- `switch.turn_on`, `switch.turn_off`
 - `cover.open_cover`, `cover.close_cover`
-- `automation.trigger`, `automation.turn_on`, `automation.turn_off`
-- `notify.notify` (send notifications)
 
-**Service call syntax:**
+## Output formats
+
+**JSON** (preferred for LLM use):
 ```bash
-hass-cli service call <domain>.<service> --arguments key=value,key2=value2
+hass-cli -o json state list 'light.*'
 ```
 
-**Examples:**
+**Table** (nice for humans):
 ```bash
-# Trigger automation
-hass-cli service call automation.trigger --arguments entity_id=automation.good_night
-
-# Light with brightness
-hass-cli service call light.turn_on --arguments entity_id=light.bedroom,brightness=128
-
-# Climate with temperature
-hass-cli service call climate.set_temperature --arguments entity_id=climate.bedroom,temperature=72
-
-# Notification
-hass-cli service call notify.notify --arguments message="Garage door open!",title="Alert"
+hass-cli -o table state list 'light.*'
 ```
 
-## Examples
+## Limitations
 
-**Turn on multiple lights:**
-```bash
-hass-cli state turn_on light.living_room
-hass-cli state turn_on light.kitchen
-```
+- `hass-cli info` uses a deprecated endpoint and may fail.
+- The wrappers currently focus on `light`, `switch`, and `cover` because those are the most useful low-context control targets.
+- Fuzzy matching is intentionally conservative about action: it may still surface near-matches, but `ha-on` / `ha-off` only act automatically when the best match is unambiguous unless `--all` is explicitly requested.
+- Not every Home Assistant integration models devices correctly; some garage-door-like devices may still appear as simple on/off entities.
 
-**Check bedroom temperature:**
-```bash
-hass-cli -o json state list 'sensor.bedroom_temperature' | jq -r '.[0].state'
-```
+## References
 
-**List all lights that are currently on:**
-```bash
-hass-cli -o json state list 'light.*' | jq '.[] | select(.state=="on") | .entity_id'a
-```
-
-**Find entities with "bar" in the name:**
-```bash
-hass-cli -o json entity list | jq '.[] | select(.entity_id | contains("bar"))'
-```
+- `skills/hass-cli/references/services.md`
+- `skills/hass-cli/scripts/README.md`
+- `skills/hass-cli/scripts/ha_resolve.py`
+- `skills/hass-cli/scripts/ha-status`
