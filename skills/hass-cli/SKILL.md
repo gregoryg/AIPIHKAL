@@ -151,6 +151,43 @@ skills/hass-cli/scripts/ha-spotify-next
     - `script` → `script.turn_on`
     - `automation` → `automation.trigger`
 
+### Guidance for automations with variable schedules
+
+If a human wants an automation to run at a user-chosen future date/time, do **not** assume the right approach is to edit the automation definition itself.
+
+Prefer this Home Assistant pattern instead:
+- keep the automation logic separate
+- store the chosen trigger time in an `input_datetime` helper
+- have the automation trigger from that helper-driven time
+
+Why this pattern is preferred:
+- the scheduled time becomes explicit entity state
+- the date/time can be changed safely with a service call
+- wrappers and LLMs can inspect and modify the schedule without mutating automation YAML/config
+- this is much easier to automate than spelunking through automation internals
+
+When working with such automations:
+1. Find the automation entity, for example `automation.announce_yogurt`.
+2. Find the related `input_datetime` helper, for example `input_datetime.yogurt_trigger_time`.
+3. Set the helper with:
+   - `input_datetime.set_datetime`
+4. Enable the automation if needed with:
+   - `automation.turn_on`
+5. Treat the automation state and helper datetime as a **combined conceptual schedule**, even though Home Assistant exposes them as separate entities.
+
+Example:
+```bash
+hass-cli service call input_datetime.set_datetime \
+  --arguments entity_id=input_datetime.yogurt_trigger_time,datetime="2026-05-04 22:00:00"
+
+hass-cli service call automation.turn_on \
+  --arguments entity_id=automation.announce_yogurt
+```
+
+Important nuance:
+- this pattern is somewhat more obtuse in the HA UI because enablement and scheduled time live in separate entities
+- but it is significantly better for LLM/tool automation because the schedule becomes explicit and editable
+
 ### LLM guidance for room-level commands
 
 When a human says something like `turn on the music room`, the likely intent is usually **room-wide lighting control**, not necessarily “pick one arbitrary entity in that area”.
@@ -278,6 +315,7 @@ hass-cli -o table state list 'light.*'
 ## References
 
 - `skills/hass-cli/references/services.md`
+- `skills/hass-cli/references/scheduling.md`
 - `skills/hass-cli/scripts/README.md`
 - `skills/hass-cli/scripts/ha_resolve.py`
 - `skills/hass-cli/scripts/ha-status`
