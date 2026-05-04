@@ -80,6 +80,18 @@ skills/hass-cli/scripts/ha-trigger "bar on quickie"
 skills/hass-cli/scripts/ha-spotify-target "Music Room"
 skills/hass-cli/scripts/ha-spotify-play
 skills/hass-cli/scripts/ha-spotify-next
+
+# Spotify — browse library and play specific content
+skills/hass-cli/scripts/ha-spotify-browse
+skills/hass-cli/scripts/ha-spotify-browse artists
+skills/hass-cli/scripts/ha-spotify-browse playlists
+skills/hass-cli/scripts/ha-spotify-play-uri "spotify:artist:3X0tJzVYoWlfjLYI0Ridsw"
+skills/hass-cli/scripts/ha-spotify-play-uri --target "Lefty + Pancho" "spotify:artist:3X0tJzVYoWlfjLYI0Ridsw"
+
+# Spotify — dump full library to a local searchable file
+skills/hass-cli/scripts/ha-spotify-dump
+skills/hass-cli/scripts/ha-spotify-dump --spotify-token TOKEN  # full artist list
+grep -i "lyle lovett" ~/.local/share/ha-spotify/library.txt
 ```
 
 **Find likely matches for a human-ish phrase:**
@@ -248,12 +260,44 @@ Important nuance:
 
 For Spotify, treat the Spotify entity as the provider/control surface and the HEOS room/group names in Spotify's `source_list` as playback targets.
 
+#### What this integration can and cannot do
+
+**Can do:**
+- Select which HEOS room or group receives audio (`ha-spotify-target`)
+- Play, pause, skip, and go to previous track
+- Query current track, artist, album, position, and volume
+- Move playback between rooms mid-song (position is preserved)
+
+**Cannot do:**
+- Search for or play a specific artist, album, track, or playlist by name
+- Browse the Spotify library
+- Queue or enqueue content
+
+The HA Spotify integration in this setup exposes `supported_features: 2048` (SELECT_SOURCE only) when idle, and transport controls when active. It acts as a Spotify Connect source-switcher with transport buttons - not a full playback controller. `play_media` calls return 500 errors because the capability is simply not exposed.
+
+**Practical implication:** to play specific content, the human must initiate playback from a Spotify client (phone, desktop, etc.) first. Once something is playing, the wrappers fully own routing and transport from that point.
+
+#### Best practices for media control
+
+1. **Always target before playing.** Use `ha-spotify-target` to route to the desired room, then `ha-spotify-play`. Calling play without targeting first will resume on whatever source Spotify last remembered.
+
+2. **Verify the source held before declaring success.** Any other Spotify-connected device (phone, laptop, etc.) can grab the active session at any moment. After a target+play sequence, the source shown in `ha-spotify-status` is the ground truth - not the service call's return value.
+
+3. **`state_confirmed: true` in play/pause responses confirms transport state only.** It does not confirm the source stayed on the intended target. If the human reports audio is not playing, run `ha-spotify-status` immediately to check whether the source drifted to another device.
+
+4. **Use `ha-spotify-status` to verify reality.** Especially after any multi-device scenario or unexpected silence. The corroboration from both `spotify` (the HA Spotify entity) and `target.players` (the HEOS player) is the most reliable picture of what is actually happening.
+
+5. **Position is preserved when moving between rooms.** `ha-spotify-target` then `ha-spotify-play` picks up the track at the same position - no need to seek.
+
+6. **HEOS friendly names and HA entity IDs often diverge.** e.g. `Music Room` in `source_list` maps to `media_player.living_room` in HA. The wrapper handles this transparently; the corroboration output surfaces the real entity ID for awareness.
+
 Use this reasoning path:
 1. Use `ha-spotify-status` to inspect current Spotify transport state and selected target.
 2. Use `ha-spotify-target "room or group"` to select a HEOS target such as `Music Room`, `Kitchen`, or `Lefty + Pancho`.
 3. Use `ha-spotify-play`, `ha-spotify-pause`, `ha-spotify-next`, and `ha-spotify-previous` for transport control.
 4. Trust transport state more than stale remembered metadata on idle room players.
 5. Use the room/player state as corroboration that the correct target is active.
+6. If the human reports no audio despite a successful-looking play call, run `ha-spotify-status` - another device may have grabbed the session.
 
 ### Ambiguity resolution examples
 
