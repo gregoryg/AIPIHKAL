@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -272,6 +273,31 @@ def trim(items: Iterable[Any], limit: int) -> list[Any]:
     return list(items)[:limit]
 
 
+def expected_states(kind: str, action: str) -> set[str]:
+    """Return acceptable target states after an action."""
+    if kind == "cover":
+        return {"open", "opening"} if action == "on" else {"closed", "closing"}
+    return {"on"} if action == "on" else {"off"}
+
+
+def poll_state_after_action(entity_id: str, kind: str, action: str) -> tuple[dict[str, Any], bool, int]:
+    """Poll entity state briefly to confirm post-action state."""
+    target_states = expected_states(kind, action)
+    attempts = 6
+    delay_seconds = 0.5
+
+    latest: dict[str, Any] = {}
+    for attempt in range(1, attempts + 1):
+        updated_state = run_hass_json(["state", "list", entity_id])
+        latest = updated_state[0] if updated_state else {}
+        if latest.get("state") in target_states:
+            return latest, True, attempt
+        if attempt < attempts:
+            time.sleep(delay_seconds)
+
+    return latest, False, attempts
+
+
 def command_find(args: argparse.Namespace) -> int:
     """Search areas and entities by human-ish query."""
     inventory = Inventory()
@@ -329,12 +355,17 @@ def command_action(args: argparse.Namespace, action: str) -> int:
     for entity in selected:
         service = service_for(entity["kind"], action)
         run_hass(["service", "call", service, "--arguments", f"entity_id={entity['entity_id']}"])
-        updated_state = run_hass_json(["state", "list", entity["entity_id"]])
-        state_record = updated_state[0] if updated_state else {}
+        state_record, state_confirmed, poll_attempts = poll_state_after_action(
+            entity["entity_id"],
+            entity["kind"],
+            action,
+        )
         results.append(
             {
                 "service": service,
                 "entity": entity,
+                "state_confirmed": state_confirmed,
+                "poll_attempts": poll_attempts,
                 "result_state": {
                     "state": state_record.get("state"),
                     "label": state_record.get("attributes", {}).get("friendly_name", entity["label"]),
