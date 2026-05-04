@@ -91,6 +91,35 @@ Supported triggerable domains:
 
 If the best match is ambiguous, the script returns candidate matches and does not act unless `--all` is explicitly requested.
 
+### `ha-intent`
+Send a natural-language phrase through HA's built-in intent pipeline — the same path as a voice command via HA Assist.
+
+```bash
+skills/hass-cli/scripts/ha-intent "turn off bathroom"
+skills/hass-cli/scripts/ha-intent "good morning"
+skills/hass-cli/scripts/ha-intent "movie time"
+```
+
+This is the right tool when a phrase may be backed by a **custom automation** in HA's intent vocabulary. For example, "turn off bathroom" might trigger a timed automation that sequences multiple switches — not just `light.turn_off` on the nearest entity. The intent pipeline fires that automation correctly. A direct `ha-off` call would bypass it entirely.
+
+**The two-step fallback pattern:**
+
+```
+1. ha-intent "turn on/off X"   →  status: ok      → done
+                                →  status: no_match → fall back to ha-on / ha-off
+```
+
+Use `ha-intent` first for room/area-level commands. Fall back to `ha-on`/`ha-off` when the intent engine doesn't recognise the phrase.
+
+**Agent isolation:** `ha-intent` explicitly targets `conversation.home_assistant` — HA's built-in intent-only engine. It does not forward to any LLM conversation agent (Ollama, Claude, GladOS, etc.) on a miss. A `no_match` result comes straight back to the caller.
+
+**Response types:**
+- `status: ok`, `response_type: action_done`, empty `success` list → automation triggered (normal; HA doesn't report entity outcomes for automation-triggered intents)
+- `status: ok`, `response_type: action_done`, populated `success` list → direct entity control succeeded
+- `status: no_match` → phrase not recognised or entity resolution failed; fall back to `ha-on`/`ha-off`/`ha-trigger`
+
+HA's NLU uses exact entity names and defined aliases — not fuzzy matching. Phrases that work via voice work here; invented phrasings generally will not.
+
 ## Setup
 
 The shell wrappers automatically:
@@ -101,6 +130,8 @@ The shell wrappers automatically:
 ### Spotify wrappers
 
 These wrappers treat Spotify as the provider entity and HEOS rooms/groups as playback targets.
+
+#### Transport and routing
 
 ```bash
 skills/hass-cli/scripts/ha-spotify-status

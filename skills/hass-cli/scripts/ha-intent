@@ -1,0 +1,8 @@
+#!/bin/bash
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+source "$repo_root/skills/common/secrets.sh"
+load_hass_token
+export HASS_SERVER="${HASS_SERVER:-http://172.16.17.7:8123}"
+exec ~/.local/python-venvs/boodle/bin/python3 "$repo_root/skills/hass-cli/scripts/ha_intent.py" "$@"

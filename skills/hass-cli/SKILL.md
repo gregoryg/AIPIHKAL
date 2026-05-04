@@ -29,7 +29,7 @@ export HASS_TOKEN=$(gpg --decrypt ~/.authinfo.gpg 2>/dev/null | grep "machine ha
 
 The raw Home Assistant registry model is often awkward for humans and LLMs:
 
-- humans think “bar light”
+- humans think "bar light"
 - Home Assistant areas often live on devices, not entities
 - many entities have `area_id: null`
 - turning something on still requires the final entity id
@@ -48,10 +48,19 @@ These scripts auto-load the token, set a default `HASS_SERVER` if one is not alr
   - Use `skills/hass-cli/scripts/ha-find "X"`
 - User asks **is X on/off/open/closed?**
   - Use `skills/hass-cli/scripts/ha-status "X"`
-- User asks **turn on/off X**
-  - Use `skills/hass-cli/scripts/ha-on "X"` or `skills/hass-cli/scripts/ha-off "X"`
+- User asks **turn on/off X** (especially a room or area name)
+  - **First** try `skills/hass-cli/scripts/ha-intent "turn on/off X"`
+  - If `status: ok` — done. The intent pipeline matched (possibly triggering a custom automation).
+  - If `status: no_match` — fall back to `skills/hass-cli/scripts/ha-on "X"` or `ha-off "X"`
 - User asks **run/trigger/activate X**
   - Use `skills/hass-cli/scripts/ha-trigger "X"`
+- User asks **what music can I play / what's in my library?**
+  - First check `~/.local/share/ha-spotify/library.txt` (grep it — it's sorted and fast)
+  - If stale or missing: run `skills/hass-cli/scripts/ha-spotify-dump` to refresh
+  - Or browse live: `skills/hass-cli/scripts/ha-spotify-browse artists` (or `playlists`, `albums`, `recent`, etc.)
+- User asks **play artist/album/playlist X**
+  - Grep `~/.local/share/ha-spotify/library.txt` for the URI, then `skills/hass-cli/scripts/ha-spotify-play-uri URI [--target ROOM]`
+  - Or use the URI directly if known: `skills/hass-cli/scripts/ha-spotify-play-uri "spotify:artist:xxx"`
 - If a control or trigger command returns ambiguity
   - Inspect `best_matches`
   - Retry with a more specific target such as an exact `entity_id`
@@ -68,15 +77,19 @@ skills/hass-cli/scripts/ha-area-summary "Bar"
 skills/hass-cli/scripts/ha-status "garage"
 skills/hass-cli/scripts/ha-status "music room"
 
-# Direct control after resolution
+# Intent pipeline (try first for room/area commands)
+skills/hass-cli/scripts/ha-intent "turn off bathroom"
+skills/hass-cli/scripts/ha-intent "good morning"
+
+# Direct control after resolution (fallback if ha-intent returns no_match)
 skills/hass-cli/scripts/ha-on "light.living_room"
 skills/hass-cli/scripts/ha-off "light.living_room"
 
-# Higher-level actions
+# Higher-level actions (scenes, scripts, named automations)
 skills/hass-cli/scripts/ha-trigger "good night"
 skills/hass-cli/scripts/ha-trigger "bar on quickie"
 
-# Spotify on HEOS
+# Spotify on HEOS — transport and routing
 skills/hass-cli/scripts/ha-spotify-target "Music Room"
 skills/hass-cli/scripts/ha-spotify-play
 skills/hass-cli/scripts/ha-spotify-next
@@ -202,7 +215,7 @@ Important nuance:
 
 ### LLM guidance for room-level commands
 
-When a human says something like `turn on the music room`, the likely intent is usually **room-wide lighting control**, not necessarily “pick one arbitrary entity in that area”.
+When a human says something like `turn on the music room`, the likely intent is usually **room-wide lighting control**, not necessarily "pick one arbitrary entity in that area".
 
 Use this reasoning path:
 
@@ -211,7 +224,7 @@ Use this reasoning path:
    - a `light.*` entity whose label matches the room name
    - a room/group light like `light.living_room` labeled `Music Room`
    - another obvious room-wide light group or helper
-3. Remember that what humans think of as a “light” may actually be represented as:
+3. Remember that what humans think of as a "light" may actually be represented as:
    - a `light`
    - a `switch`
    - a `plug`
@@ -227,8 +240,18 @@ Important nuance:
 - therefore the wrappers should remain conservative, while the LLM uses the compact JSON plus domain knowledge to choose smartly
 
 - `ha-status`
-  - optimized for questions like “are the garage doors closed?”
+  - optimized for questions like "are the garage doors closed?"
   - returns compact area and actionable-entity status without including non-actionable sensors by default
+
+- `ha-intent`
+  - sends a natural-language phrase through HA's built-in intent pipeline (`conversation.home_assistant`)
+  - this is the same path as voice commands via HA Assist — custom intent phrases and automation-backed phrases fire correctly
+  - returns `status: ok` with `response_type: action_done` when the intent matched and executed
+  - `action_done` with an empty `success` list is normal for automation-triggered intents — the automation fired but HA does not report individual entity outcomes
+  - returns `status: no_match` when HA does not recognise the phrase — caller should fall back to `ha-on`/`ha-off`/`ha-trigger`
+  - HA's NLU uses exact entity names and aliases, not fuzzy matching — phrases that work via voice work here; invented phrasings likely will not
+  - **use this first for room-level or area-level commands** ("turn off bathroom", "good morning", "movie time") where a custom automation may be the correct action
+  - do not use this as a general replacement for `ha-on`/`ha-off` — it is a complement, not a substitute
 
 - `ha-spotify-browse`
   - uses the HA WebSocket API to browse the Spotify library (not hass-cli)
