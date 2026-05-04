@@ -218,6 +218,32 @@ Important nuance:
   - optimized for questions like “are the garage doors closed?”
   - returns compact area and actionable-entity status without including non-actionable sensors by default
 
+- `ha-spotify-browse`
+  - uses the HA WebSocket API to browse the Spotify library (not hass-cli)
+  - **requires Spotify to be playing or paused** — when idle, HA drops BROWSE_MEDIA from supported_features and browse returns an error
+  - with no arguments: lists available library sections with their content types
+  - with a section name: returns all items with `title`, `uri`, `type`, and `can_play`
+  - available sections: `playlists`, `artists`, `albums`, `liked`, `recent`, `top-artists`, `top-tracks`
+  - all returned URIs are ready to pass directly to `ha-spotify-play-uri`
+
+- `ha-spotify-play-uri`
+  - plays a specific Spotify URI via `media_player.play_media` (REST API, not hass-cli)
+  - media type is auto-detected from the URI prefix (`spotify:artist:`, `spotify:album:`, `spotify:playlist:`, `spotify:track:`, etc.)
+  - use `--type` to override if auto-detection fails
+  - use `--target ROOM` to select a playback destination in the same command
+  - if Spotify is idle when called, HA will attempt to route to the first available Spotify Connect device — prefer targeting explicitly
+  - works for any valid Spotify URI, including ones not in the user's library
+
+- `ha-spotify-dump`
+  - dumps all available Spotify library sections to `~/.local/share/ha-spotify/library.txt` (grep-friendly) and `library.json`
+  - text file format: `Title | spotify:type:id | type` — sorted alphabetically, ready to grep
+  - sections dumped: playlists, followed artists, saved albums, recently played, top artists, top tracks
+  - **followed artists are capped at 48** by a hardcoded limit in the upstream `spotifyaio` library (the maintainer has closed the pagination issue as "not planned": https://github.com/joostlek/python-spotify/issues/730)
+  - pass `--spotify-token TOKEN` to bypass the HA integration entirely and fetch all followed artists directly from the Spotify API with proper cursor pagination
+  - a Spotify OAuth token for `--spotify-token` can be obtained from https://developer.spotify.com/console/get-following/ (use the `user-follow-read` scope)
+  - the dump file should be refreshed periodically; grep it before calling `ha-spotify-browse` to avoid a live WebSocket round-trip
+  - **requires Spotify to be playing or paused** (same idle restriction as `ha-spotify-browse`)
+
 ### Spotify media guidance
 
 For Spotify, treat the Spotify entity as the provider/control surface and the HEOS room/group names in Spotify's `source_list` as playback targets.
@@ -323,3 +349,10 @@ hass-cli -o table state list 'light.*'
 - `skills/hass-cli/scripts/spotify_control.py`
 - `skills/hass-cli/scripts/ha-spotify-status`
 - `skills/hass-cli/scripts/ha-spotify-target`
+- `skills/hass-cli/scripts/spotify_browse.py`
+- `skills/hass-cli/scripts/ha-spotify-browse`
+- `skills/hass-cli/scripts/ha-spotify-play-uri`
+- `skills/hass-cli/scripts/spotify_dump.py`
+- `skills/hass-cli/scripts/ha-spotify-dump`
+- `skills/hass-cli/scripts/ha_intent.py`
+- `skills/hass-cli/scripts/ha-intent`

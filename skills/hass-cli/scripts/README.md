@@ -118,9 +118,69 @@ Current model:
 - target/player state is shown as corroboration
 - grouped targets such as `Lefty + Pancho` return multiple corroborating players when detectable
 
+#### Browse library and play specific content
+
+```bash
+# List available library sections
+skills/hass-cli/scripts/ha-spotify-browse
+
+# Browse a section — returns items with playable URIs
+skills/hass-cli/scripts/ha-spotify-browse artists
+skills/hass-cli/scripts/ha-spotify-browse playlists
+skills/hass-cli/scripts/ha-spotify-browse albums
+skills/hass-cli/scripts/ha-spotify-browse liked
+skills/hass-cli/scripts/ha-spotify-browse recent
+skills/hass-cli/scripts/ha-spotify-browse top-artists
+skills/hass-cli/scripts/ha-spotify-browse top-tracks
+
+# Play a URI (type auto-detected from URI prefix)
+skills/hass-cli/scripts/ha-spotify-play-uri "spotify:artist:3X0tJzVYoWlfjLYI0Ridsw"
+
+# Play a URI and route to a room in one command
+skills/hass-cli/scripts/ha-spotify-play-uri --target "Lefty + Pancho" "spotify:artist:3X0tJzVYoWlfjLYI0Ridsw"
+```
+
+**Important:** `ha-spotify-browse` uses the HA WebSocket API (not hass-cli) and requires Spotify to be
+playing or paused. When Spotify is idle, HA removes BROWSE_MEDIA from `supported_features` and browse
+will return a `not_supported` error with instructions. Start playback first, then browse.
+
+`ha-spotify-play-uri` works with any valid Spotify URI — including artists not in your library.
+
+#### Dump library to a local searchable file
+
+```bash
+# Dump all available sections to ~/.local/share/ha-spotify/
+skills/hass-cli/scripts/ha-spotify-dump
+
+# Full followed-artists list via direct Spotify API (bypasses the 48-artist cap)
+skills/hass-cli/scripts/ha-spotify-dump --spotify-token TOKEN
+
+# Grep the result
+grep -i "lyle lovett" ~/.local/share/ha-spotify/library.txt
+```
+
+Output files:
+- `library.txt` — sorted, one entry per line: `Title | spotify:type:id | type`
+- `library.json` — full structured dump with all sections
+
+Sections dumped: playlists, followed artists, saved albums, recently played, top artists, top tracks.
+
+**The 48-artist cap:** the upstream `spotifyaio` library (used by the HA Spotify integration)
+hardcodes `limit=48` in `get_followed_artists()` with no pagination. The maintainer has closed
+the issue as "not planned" (https://github.com/joostlek/python-spotify/issues/730).
+The `--spotify-token` flag works around this by calling the Spotify API directly.
+Get a token with `user-follow-read` scope from https://developer.spotify.com/console/get-following/
+
+The typical workflow for finding and playing specific content:
+1. `ha-spotify-dump` to build/refresh the local cache (run when library changes)
+2. `grep -i "artist name" ~/.local/share/ha-spotify/library.txt` to find the URI
+3. `ha-spotify-play-uri --target "Room" "spotify:...:..."` to play it
+
 ## Notes
 
 - Default actionable domains: `light`, `switch`, `cover`, `scene`, `script`, `automation`
 - Matching is fuzzy but action is conservative
 - Raw `hass-cli` commands remain available for debugging edge cases
 - For media control, trust transport state more than stale remembered metadata on idle players
+- **Intent-first rule:** for room/area commands, try `ha-intent` before `ha-on`/`ha-off`. HA's intent vocabulary encodes domain knowledge (timed sequences, multi-device automations) that direct service calls silently bypass.
+- `ha-intent`, `ha-spotify-browse`, `ha-spotify-dump`, and `ha-spotify-play-uri` use the HA WebSocket API or REST API directly — not `hass-cli` — because `hass-cli` cannot handle nested JSON payloads or WebSocket-only commands.

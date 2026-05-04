@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.request
 from typing import Any
 
 SPOTIFY_ENTITY = os.environ.get("HA_SPOTIFY_ENTITY", "media_player.spotify_gortsleigh")
@@ -239,6 +240,94 @@ def command_previous(_: argparse.Namespace) -> int:
     return transport_command("media_player.media_previous_track", {"playing"})
 
 
+URI_TYPE_MAP: dict[str, str] = {
+    "artist":   "artist",
+    "album":    "album",
+    "playlist": "playlist",
+    "track":    "track",
+    "episode":  "episode",
+    "show":     "show",
+}
+
+
+def detect_type_from_uri(uri: str) -> str | None:
+    """Auto-detect media_content_type from a Spotify URI."""
+    # Handles spotify:artist:xxx, spotify:album:xxx, spotify:playlist:xxx etc.
+    parts = uri.split(":")
+    if len(parts) >= 2 and parts[0] == "spotify":
+        return URI_TYPE_MAP.get(parts[1])
+    return None
+
+
+def call_rest_service(service: str, payload: dict) -> None:
+    """Call a HA service via the REST API (handles nested JSON payloads cleanly)."""
+    hass_server = os.environ.get("HASS_SERVER", "http://172.16.17.7:8123")
+    token = os.environ.get("HASS_TOKEN", "")
+    url = f"{hass_server}/api/services/{service.replace('.', '/', 1)}"
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req) as resp:
+        resp.read()  # consume body; raises HTTPError on non-2xx
+
+
+def command_play_uri(args: argparse.Namespace) -> int:
+    """Play a specific Spotify URI (artist, album, playlist, or track)."""
+    uri = args.uri
+    media_type = args.type or detect_type_from_uri(uri)
+    if not media_type:
+        print_json({
+            "status": "error",
+            "message": (
+                f"Cannot detect media type from URI '{uri}'. "
+                "Pass --type artist|album|playlist|track|episode|show explicitly."
+            ),
+        })
+        return 1
+
+    # Optionally select target room first
+    if args.target:
+        matches = resolve_source(args.target)
+        if not matches:
+            print_json({"status": "no_match", "query": args.target, "best_matches": []})
+            return 1
+        top_score = matches[0]["score"]
+        best = [m for m in matches if m["score"] == top_score]
+        if len(best) > 1:
+            print_json({"status": "ambiguous", "query": args.target, "best_matches": best})
+            return 2
+        source = best[0]["source"]
+        run_hass(["service", "call", "media_player.select_source",
+                  "--arguments", f"entity_id={SPOTIFY_ENTITY},source={source}"])
+
+    try:
+        call_rest_service("media_player.play_media", {
+            "entity_id": SPOTIFY_ENTITY,
+            "media_content_id": uri,
+            "media_content_type": media_type,
+        })
+    except Exception as exc:
+        print_json({"status": "error", "message": f"play_media failed: {exc}"})
+        return 3
+
+    state, confirmed, attempts = poll_state({"playing", "paused"})
+    print_json({
+        "status": "ok",
+        "uri": uri,
+        "media_type": media_type,
+        "target": args.target or None,
+        "state_confirmed": confirmed,
+        "poll_attempts": attempts,
+        "spotify": state,
+        "players": target_state_from_source(state.get("source")),
+    })
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build CLI parser."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -262,6 +351,25 @@ def build_parser() -> argparse.ArgumentParser:
 
     prev = sub.add_parser("previous", help="Go to previous track")
     prev.set_defaults(func=command_previous)
+
+    play_uri = sub.add_parser(
+        "play-uri",
+        help="Play a specific Spotify URI (artist, album, playlist, track)",
+    )
+    play_uri.add_argument("uri", help="Spotify URI, e.g. spotify:artist:2nIQ8SpFBkimDSCNFHwAQL")
+    play_uri.add_argument(
+        "--type",
+        choices=list(URI_TYPE_MAP.keys()),
+        default=None,
+        help="Media type (auto-detected from URI if omitted)",
+    )
+    play_uri.add_argument(
+        "--target",
+        default=None,
+        metavar="ROOM",
+        help="Select a playback target room/group before playing, e.g. 'Kitchen'",
+    )
+    play_uri.set_defaults(func=command_play_uri)
 
     return parser
 
