@@ -16,7 +16,12 @@ from typing import Any
 
 DEFAULT_HASS_CLI = os.environ.get("HASS_CLI_BIN", "hass-cli")
 DEFAULT_CONTROLLABLE_DOMAINS = {"light", "switch", "cover"}
-SEARCH_STOPWORDS = {"light", "lights", "switch", "switches", "plug", "plugs", "cover", "covers"}
+DEFAULT_TRIGGERABLE_DOMAINS = {"scene", "script", "automation"}
+DEFAULT_ACTIONABLE_DOMAINS = DEFAULT_CONTROLLABLE_DOMAINS | DEFAULT_TRIGGERABLE_DOMAINS
+SEARCH_STOPWORDS = {
+    "light", "lights", "switch", "switches", "plug", "plugs", "cover", "covers",
+    "scene", "scenes", "script", "scripts", "automation", "automations",
+}
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent
 
@@ -161,6 +166,8 @@ class Inventory:
             "disabled_by": entity.get("disabled_by"),
             "hidden_by": entity.get("hidden_by"),
             "controllable": domain in DEFAULT_CONTROLLABLE_DOMAINS,
+            "triggerable": domain in DEFAULT_TRIGGERABLE_DOMAINS,
+            "actionable": domain in DEFAULT_ACTIONABLE_DOMAINS,
         }
 
     def _build_entities_by_area_id(self) -> dict[str, list[dict[str, Any]]]:
@@ -200,7 +207,7 @@ class Inventory:
         for entity in self.entity_records:
             if entity.get("disabled_by"):
                 continue
-            if controllable_only and not entity["controllable"]:
+            if controllable_only and not entity["actionable"]:
                 continue
             score = score_text(
                 query,
@@ -220,7 +227,7 @@ class Inventory:
         entities = [
             entity
             for entity in self.entities_by_area_id.get(area_id, [])
-            if entity["controllable"] and not entity.get("disabled_by")
+            if entity["actionable"] and not entity.get("disabled_by")
         ]
         return sorted(entities, key=lambda item: (item["domain"], item["friendly_name"].lower(), item["entity_id"]))
 
@@ -228,11 +235,13 @@ class Inventory:
         return self.area_candidates(query)
 
     def resolve_for_action(self, query: str) -> list[dict[str, Any]]:
-        matches = self.entity_candidates(query, controllable_only=True)
+        matches = [match for match in self.entity_candidates(query, controllable_only=True) if match["kind"] in DEFAULT_CONTROLLABLE_DOMAINS]
         by_id = {match["entity_id"]: match for match in matches}
 
         for area in self.area_candidates(query):
             for entity in area["entities"]:
+                if entity["kind"] not in DEFAULT_CONTROLLABLE_DOMAINS:
+                    continue
                 existing = by_id.get(entity["entity_id"])
                 area_match = {"score": area["score"], **entity}
                 if existing is None or area_match["score"] > existing.get("score", 0):
@@ -241,6 +250,13 @@ class Inventory:
         resolved = list(by_id.values())
         return sorted(
             resolved,
+            key=lambda item: (-item.get("score", 0), item["label"].lower(), item["entity_id"]),
+        )
+
+    def resolve_for_trigger(self, query: str) -> list[dict[str, Any]]:
+        matches = [match for match in self.entity_candidates(query, controllable_only=True) if match["kind"] in DEFAULT_TRIGGERABLE_DOMAINS]
+        return sorted(
+            matches,
             key=lambda item: (-item.get("score", 0), item["label"].lower(), item["entity_id"]),
         )
 
@@ -261,6 +277,17 @@ def service_for(domain: str, action: str) -> str:
     if domain == "cover":
         return f"cover.{ 'open_cover' if action == 'on' else 'close_cover' }"
     return f"{domain}.turn_{action}"
+
+
+def trigger_service_for(domain: str) -> str:
+    """Map a triggerable domain to its HA service."""
+    if domain == "scene":
+        return "scene.turn_on"
+    if domain == "script":
+        return "script.turn_on"
+    if domain == "automation":
+        return "automation.trigger"
+    raise HassCliError(f"Unsupported trigger domain: {domain}")
 
 
 def print_json(payload: dict[str, Any]) -> None:
@@ -389,13 +416,57 @@ def command_status(args: argparse.Namespace) -> int:
     """Show compact status for matching areas and actionable entities."""
     inventory = Inventory()
     area_matches = trim(inventory.area_candidates(args.query), args.limit)
-    entity_matches = trim(inventory.resolve_for_action(args.query), args.limit)
+    entity_matches = trim(inventory.entity_candidates(args.query, controllable_only=True), args.limit)
     print_json(
         {
             "status": "ok",
             "query": args.query,
             "area_matches": area_matches,
             "best_matches": entity_matches,
+        }
+    )
+    return 0
+
+
+def command_trigger(args: argparse.Namespace) -> int:
+    """Resolve a query and trigger a scene, script, or automation."""
+    inventory = Inventory()
+    matches = inventory.resolve_for_trigger(args.query)
+    if not matches:
+        print_json({"status": "no_match", "query": args.query, "best_matches": []})
+        return 1
+
+    top_score = matches[0].get("score", 0)
+    best = [match for match in matches if match.get("score", 0) == top_score]
+    if len(best) > 1 and not args.all:
+        print_json({"status": "ambiguous", "query": args.query, "best_matches": best})
+        return 2
+
+    selected = best if args.all else [best[0]]
+    results: list[dict[str, Any]] = []
+    for entity in selected:
+        service = trigger_service_for(entity["kind"])
+        run_hass(["service", "call", service, "--arguments", f"entity_id={entity['entity_id']}"])
+        updated_state = run_hass_json(["state", "list", entity["entity_id"]])
+        state_record = updated_state[0] if updated_state else {}
+        results.append(
+            {
+                "service": service,
+                "entity": entity,
+                "result_state": {
+                    "state": state_record.get("state"),
+                    "label": state_record.get("attributes", {}).get("friendly_name", entity["label"]),
+                },
+            }
+        )
+
+    print_json(
+        {
+            "status": "ok",
+            "query": args.query,
+            "action": "trigger",
+            "acted_on_count": len(results),
+            "results": results,
         }
     )
     return 0
@@ -434,6 +505,11 @@ def build_parser() -> argparse.ArgumentParser:
     off_parser.add_argument("query", help="Human-ish query such as 'bar light'")
     off_parser.add_argument("--all", action="store_true", help="Act on all top-scoring matches")
     off_parser.set_defaults(func=lambda ns: command_action(ns, "off"))
+
+    trigger_parser = subparsers.add_parser("trigger", help="Trigger scenes, scripts, or automations")
+    trigger_parser.add_argument("query", help="Human-ish query such as 'good night' or 'movie time'")
+    trigger_parser.add_argument("--all", action="store_true", help="Act on all top-scoring matches")
+    trigger_parser.set_defaults(func=command_trigger)
 
     return parser
 
