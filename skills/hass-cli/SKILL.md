@@ -50,7 +50,9 @@ These scripts auto-load the token, set a default `HASS_SERVER` if one is not alr
   - Use `skills/hass-cli/scripts/ha-status "X"`
 - User asks **turn on/off X**
   - Use `skills/hass-cli/scripts/ha-on "X"` or `skills/hass-cli/scripts/ha-off "X"`
-- If a control command returns ambiguity
+- User asks **run/trigger/activate X**
+  - Use `skills/hass-cli/scripts/ha-trigger "X"`
+- If a control or trigger command returns ambiguity
   - Inspect `best_matches`
   - Retry with a more specific target such as an exact `entity_id`
   - Only use `--all` when the human clearly intends multi-entity action
@@ -69,6 +71,10 @@ skills/hass-cli/scripts/ha-status "music room"
 # Direct control after resolution
 skills/hass-cli/scripts/ha-on "light.living_room"
 skills/hass-cli/scripts/ha-off "light.living_room"
+
+# Higher-level actions
+skills/hass-cli/scripts/ha-trigger "good night"
+skills/hass-cli/scripts/ha-trigger "bar on quickie"
 ```
 
 **Find likely matches for a human-ish phrase:**
@@ -95,12 +101,18 @@ skills/hass-cli/scripts/ha-status "garage"
 skills/hass-cli/scripts/ha-status "bar light"
 ```
 
+**Trigger a scene, script, or automation:**
+```bash
+skills/hass-cli/scripts/ha-trigger "good night"
+skills/hass-cli/scripts/ha-trigger "bar on quickie"
+```
+
 ### Wrapper behavior
 
 - `ha-find`
   - searches both areas and entities
   - returns multiple plausible matches instead of forcing one
-  - defaults to actionable domains (`light`, `switch`, `cover`)
+  - defaults to actionable domains (`light`, `switch`, `cover`, `scene`, `script`, `automation`)
   - uses compact `best_matches` records by default so LLMs do not have to wade through low-value registry fields
   - use `--include-all-domains` to include sensors and other informational entities
 
@@ -114,6 +126,16 @@ skills/hass-cli/scripts/ha-status "bar light"
   - if several equally strong matches exist, return them as JSON and do not act
   - use `--all` for intentional multi-entity actions on all top-scoring matches
   - for `cover` entities, maps on/off semantics to `open_cover` / `close_cover`
+
+- `ha-trigger`
+  - resolves a human-ish phrase to a `scene`, `script`, or `automation`
+  - if exactly one strong match exists, trigger it
+  - if several equally strong matches exist, return them as JSON and do not act
+  - use `--all` only when intentional multi-trigger behavior is desired
+  - maps domains as follows:
+    - `scene` → `scene.turn_on`
+    - `script` → `script.turn_on`
+    - `automation` → `automation.trigger`
 
 ### LLM guidance for room-level commands
 
@@ -234,3 +256,4 @@ hass-cli -o table state list 'light.*'
 - `skills/hass-cli/scripts/README.md`
 - `skills/hass-cli/scripts/ha_resolve.py`
 - `skills/hass-cli/scripts/ha-status`
+- `skills/hass-cli/scripts/ha-trigger`
