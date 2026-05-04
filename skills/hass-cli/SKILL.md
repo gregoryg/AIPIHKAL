@@ -40,6 +40,37 @@ In this repo, prefer the wrapper scripts in `skills/hass-cli/scripts/` before fa
 
 These scripts auto-load the token, set a default `HASS_SERVER` if one is not already exported, and return compact, decision-ready JSON.
 
+### Quick decision table for weaker tool-calling models
+
+- User asks **what is in room/area X?**
+  - Use `skills/hass-cli/scripts/ha-area-summary "X"`
+- User asks **find or identify X**
+  - Use `skills/hass-cli/scripts/ha-find "X"`
+- User asks **is X on/off/open/closed?**
+  - Use `skills/hass-cli/scripts/ha-status "X"`
+- User asks **turn on/off X**
+  - Use `skills/hass-cli/scripts/ha-on "X"` or `skills/hass-cli/scripts/ha-off "X"`
+- If a control command returns ambiguity
+  - Inspect `best_matches`
+  - Retry with a more specific target such as an exact `entity_id`
+  - Only use `--all` when the human clearly intends multi-entity action
+
+### Recommended command patterns
+
+```bash
+# Discovery
+skills/hass-cli/scripts/ha-find "bar light"
+skills/hass-cli/scripts/ha-area-summary "Bar"
+
+# Status questions
+skills/hass-cli/scripts/ha-status "garage"
+skills/hass-cli/scripts/ha-status "music room"
+
+# Direct control after resolution
+skills/hass-cli/scripts/ha-on "light.living_room"
+skills/hass-cli/scripts/ha-off "light.living_room"
+```
+
 **Find likely matches for a human-ish phrase:**
 ```bash
 skills/hass-cli/scripts/ha-find "bar light"
@@ -84,9 +115,47 @@ skills/hass-cli/scripts/ha-status "bar light"
   - use `--all` for intentional multi-entity actions on all top-scoring matches
   - for `cover` entities, maps on/off semantics to `open_cover` / `close_cover`
 
+### LLM guidance for room-level commands
+
+When a human says something like `turn on the music room`, the likely intent is usually **room-wide lighting control**, not necessarily “pick one arbitrary entity in that area”.
+
+Use this reasoning path:
+
+1. If the query is primarily an **area/room name**, first inspect `ha-area-summary` or `ha-find` results.
+2. Prefer a **named aggregate lighting entity** if one exists, such as:
+   - a `light.*` entity whose label matches the room name
+   - a room/group light like `light.living_room` labeled `Music Room`
+   - another obvious room-wide light group or helper
+3. Remember that what humans think of as a “light” may actually be represented as:
+   - a `light`
+   - a `switch`
+   - a `plug`
+   - a named group/helper entity
+4. If a likely room-wide aggregate exists, prefer that as the first target.
+5. If no such aggregate exists, consider whether `--all` is appropriate for the actionable entities in the room.
+6. Do not blindly use `--all` for a room command just because several entities match.
+7. Keep the human or LLM in the loop when several plausible interpretations remain.
+
+Important nuance:
+- a named group is often the best match for room-wide commands
+- but it may not include every intended entity
+- therefore the wrappers should remain conservative, while the LLM uses the compact JSON plus domain knowledge to choose smartly
+
 - `ha-status`
   - optimized for questions like “are the garage doors closed?”
   - returns compact area and actionable-entity status without including non-actionable sensors by default
+
+### Ambiguity resolution examples
+
+**Example: `turn on music room`**
+- First inspect `ha-area-summary "Music Room"`.
+- If there is a likely room-wide light/group entity such as `light.living_room` labeled `Music Room`, prefer that over individual member lights.
+- If no likely aggregate exists, then consider `--all` only if whole-room multi-entity control is clearly intended.
+
+**Example: `are the garage doors closed?`**
+- Use `ha-status "garage"`.
+- Read the `best_matches` or area entities and answer from their `state` values.
+- Do not use `ha-find` first unless `ha-status` is insufficient.
 
 ## Important implementation note
 
