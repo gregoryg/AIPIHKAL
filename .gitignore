@@ -10,3 +10,5 @@ skills/frontend-design/
 skills/skill-creator/
 skills/webapp-testing/
 **/__pycache__/
+# Home-specific context appendix (may contain private info — wifi, personal details)
+skills/hass-cli/*-home.md
