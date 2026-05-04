@@ -75,6 +75,11 @@ skills/hass-cli/scripts/ha-off "light.living_room"
 # Higher-level actions
 skills/hass-cli/scripts/ha-trigger "good night"
 skills/hass-cli/scripts/ha-trigger "bar on quickie"
+
+# Spotify on HEOS
+skills/hass-cli/scripts/ha-spotify-target "Music Room"
+skills/hass-cli/scripts/ha-spotify-play
+skills/hass-cli/scripts/ha-spotify-next
 ```
 
 **Find likely matches for a human-ish phrase:**
@@ -105,6 +110,15 @@ skills/hass-cli/scripts/ha-status "bar light"
 ```bash
 skills/hass-cli/scripts/ha-trigger "good night"
 skills/hass-cli/scripts/ha-trigger "bar on quickie"
+```
+
+**Spotify on HEOS:**
+```bash
+skills/hass-cli/scripts/ha-spotify-status
+skills/hass-cli/scripts/ha-spotify-target "Music Room"
+skills/hass-cli/scripts/ha-spotify-play
+skills/hass-cli/scripts/ha-spotify-pause
+skills/hass-cli/scripts/ha-spotify-next
 ```
 
 ### Wrapper behavior
@@ -166,6 +180,17 @@ Important nuance:
 - `ha-status`
   - optimized for questions like “are the garage doors closed?”
   - returns compact area and actionable-entity status without including non-actionable sensors by default
+
+### Spotify media guidance
+
+For Spotify, treat the Spotify entity as the provider/control surface and the HEOS room/group names in Spotify's `source_list` as playback targets.
+
+Use this reasoning path:
+1. Use `ha-spotify-status` to inspect current Spotify transport state and selected target.
+2. Use `ha-spotify-target "room or group"` to select a HEOS target such as `Music Room`, `Kitchen`, or `Lefty + Pancho`.
+3. Use `ha-spotify-play`, `ha-spotify-pause`, `ha-spotify-next`, and `ha-spotify-previous` for transport control.
+4. Trust transport state more than stale remembered metadata on idle room players.
+5. Use the room/player state as corroboration that the correct target is active.
 
 ### Ambiguity resolution examples
 
@@ -257,3 +282,6 @@ hass-cli -o table state list 'light.*'
 - `skills/hass-cli/scripts/ha_resolve.py`
 - `skills/hass-cli/scripts/ha-status`
 - `skills/hass-cli/scripts/ha-trigger`
+- `skills/hass-cli/scripts/spotify_control.py`
+- `skills/hass-cli/scripts/ha-spotify-status`
+- `skills/hass-cli/scripts/ha-spotify-target`
