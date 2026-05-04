@@ -7,6 +7,16 @@ description: Control and query Home Assistant via the hass-cli Python CLI. Use w
 
 Control Home Assistant via the `hass-cli` Python CLI.
 
+## Home context appendix
+
+If a `*-home.md` file exists in `skills/hass-cli/`, **read it before proceeding**. It contains
+home-specific context that this generic skill cannot know: device naming conventions, area quirks,
+verified `ha-intent` phrases, resident names, and semantic mappings that are invisible in the
+entity registry. Without it, you will make confident wrong guesses about amusingly named lights.
+
+A template lives at `skills/hass-cli/YOUR_HOME_NAME-home.md.template`.
+The home file is gitignored (it may contain private information).
+
 ## Configuration
 
 **Binary location:** `~/.local/python-venvs/boodle/bin/hass-cli` (or see if it's in the path already with `which hass-cli`)

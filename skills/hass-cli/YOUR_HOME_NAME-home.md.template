@@ -1,0 +1,156 @@
+# YOUR_HOME_NAME — Home Context Appendix
+# Copy this file to YOUR_HOME_NAME-home.md, personalise it, and add it to .gitignore.
+# Read this file alongside SKILL.md at the start of any Home Assistant session.
+# It exists to give the LLM the semantic context that HA's entity registry cannot.
+
+---
+name: YOUR_HOME_NAME
+description: Home-specific context appendix for the hass-cli skill
+---
+
+## How to use this file
+
+This file is an appendix to `skills/hass-cli/SKILL.md`. It does not replace the skill —
+it narrows it. Read SKILL.md for how the tools work; read this file to understand what
+the tools will find when they run in this specific home.
+
+Keep it up to date. When you rename a device, add a room, or discover that a phrase
+works (or doesn't work) via `ha-intent`, note it here. Future LLM sessions will thank you.
+
+---
+
+## Home identity
+
+- **Name:** Your Home Name (used for casual reference, e.g. "turn on the porch light at Whatsit House")
+- **Location:** City, State/Province, Country
+- **Timezone:** e.g. America/Denver (MDT)
+- **HA server:** http://YOUR.HA.IP:8123
+- **Spotify account:** your_spotify_username (entity: `media_player.spotify_YOURNAME`)
+
+---
+
+## The Naming Rosetta Stone
+
+This is the most important section. It maps the home's actual device names — which may be
+whimsical, historical, or deeply personal — to what they physically are and where they live.
+An LLM that doesn't have this will make confident wrong guesses.
+
+### Speakers and media players
+
+| Name / entity | What it actually is | Location |
+|---|---|---|
+| `media_player.living_room` | HEOS speaker, labelled "Music Room" | Main living/music area |
+| `media_player.kitchen` | HEOS speaker "Kitchen" | Kitchen |
+| `media_player.lefty` | HEOS speaker "Lefty" (one half of a pair) | [ROOM] |
+| `media_player.pancho` | HEOS speaker "Pancho" (one half of a pair) | [ROOM] |
+| Lefty + Pancho | HEOS group — use as Spotify target | [ROOM] — grouped stereo pair |
+| `media_player.rozi_office` | HEOS speaker in Rozi's office | Rozi Office |
+
+> Note: HEOS-labelled room names in Spotify's `source_list` do not always match HA entity IDs.
+> e.g. "Music Room" in source_list → `media_player.living_room` in HA. The wrappers handle this.
+
+### Lights — the amusing ones
+
+Document lights with non-obvious names so the LLM doesn't confuse them with people, places, or things.
+
+| Name / entity | What it physically is | Location / notes |
+|---|---|---|
+| `light.example_a` | Floor lamp by the window | Living room |
+| `light.example_b` | Under-cabinet strip light | Kitchen |
+| GROUP_NAME lights | Group of the above | [AREA] |
+
+### Switches and plugs
+
+| Name / entity | What it physically is | Location / notes |
+|---|---|---|
+| `switch.example` | Smart plug controlling the coffee maker | Kitchen counter |
+
+### Other named devices
+
+| Name / entity | What it physically is | Notes |
+|---|---|---|
+| `YOUR_ENTITY` | Physical description | Any helpful context |
+
+---
+
+## Residents and their devices
+
+Who lives here, and what devices they own that show up in HA or Spotify.
+
+| Person | Role | Devices / entities of note |
+|---|---|---|
+| [Name] | Resident | Phone appears as "[Phone Name]" in Spotify source_list |
+| [Name] | Resident | Office: [area name] |
+| [Name] | Guest / part-time | [any relevant devices] |
+
+> Note: Personal phones appear in Spotify's `source_list` when the Spotify app is active.
+> If playback unexpectedly moves to "[Person's Phone]", they've taken over the Spotify session.
+> This is a Spotify multi-device behaviour, not a wrapper bug.
+
+---
+
+## Areas and rooms — quirks and notes
+
+Document anything non-obvious about specific areas.
+
+| Area | HA area_id | Notes |
+|---|---|---|
+| [Room name] | [area_id] | e.g. "The entity_id is living_room but it's labelled Music Room" |
+| [Room name] | [area_id] | e.g. "Bathroom has a timed shutdown automation — use ha-intent, not ha-off" |
+
+---
+
+## Known ha-intent phrases
+
+Phrases verified to work via `ha-intent` in this home. These are backed by custom automations
+or intent configurations that go beyond what `ha-on`/`ha-off`/`ha-trigger` can reach.
+
+```
+ha-intent "PHRASE"   →  what it does
+```
+
+| Phrase | What happens | Notes |
+|---|---|---|
+| "turn off [room]" | Timed automation sequences lights/switches | Preferred over ha-off for this room |
+| "good morning" | Morning routine automation | |
+| "good night" | Also available via ha-trigger "good night" | |
+| "[scene name]" | Activates scene | |
+
+> When adding new phrases: test with `ha-intent "phrase"` and confirm `status: ok` before
+> documenting here. If it returns `no_match`, the phrase is not in HA's intent vocabulary.
+
+---
+
+## Spotify and media
+
+- **Default room for casual listening:** [e.g. Kitchen]
+- **Default room for focused/stereo listening:** [e.g. Lefty + Pancho]
+- **Library dump location:** `~/.local/share/ha-spotify/library.txt` (refresh with `ha-spotify-dump`)
+- **Musical character of this home:** [brief notes — helps LLM make sensible suggestions]
+  - e.g. Heavy on Americana, folk, bluegrass, Latin; light on pop
+- **Known favourite artists:** [comma-separated — helps with recommendations]
+- **Podcasts / audiobooks in rotation:** [if relevant]
+
+---
+
+## Home-specific gotchas
+
+Things that will silently go wrong without this knowledge.
+
+- [e.g. "The 'Music Room' area_id is 'living_room' — don't confuse with the light entity light.living_room"]
+- [e.g. "Bathroom automation runs a timed sequence — always use ha-intent, never ha-off directly"]
+- [e.g. "excession in Spotify source_list is [device name], not a room"]
+- [e.g. "Lights in the [area] group are not assigned to an HA area — ha-area-summary won't find them"]
+
+---
+
+## Guest information
+
+> ⚠ This section contains private information. Keep this file out of git.
+> Add `skills/hass-cli/*-home.md` to `.gitignore`.
+
+- **Guest Wi-Fi network:** [SSID]
+- **Guest Wi-Fi password:** [PASSWORD]
+- **Guest room location:** [directions or notes]
+- **Things guests can ask the assistant to do:** [e.g. control guest room lights, play music in kitchen]
+- **Things guests should not ask:** [e.g. garage doors, alarm system]
