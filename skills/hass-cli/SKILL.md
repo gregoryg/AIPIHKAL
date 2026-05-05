@@ -434,6 +434,17 @@ hass-cli -o table state list 'light.*'
 - Fuzzy matching is intentionally conservative about action: it may still surface near-matches, but `ha-on` / `ha-off` only act automatically when the best match is unambiguous unless `--all` is explicitly requested.
 - Not every Home Assistant integration models devices correctly; some garage-door-like devices may still appear as simple on/off entities.
 
+### Cover entities and physical travel time
+
+`state_confirmed: false` on a `cover` close/open command does not necessarily mean the command failed. Garage doors and similar covers have physical travel time (typically 10–20 seconds) that exceeds the wrapper's polling window. The correct response is to wait a few seconds and re-check with `ha-status` rather than immediately retrying the command — a retry on a moving door is at best redundant and at worst reverses the action.
+
+Also note that many covers report only binary states (`open` / `closed`) with no intermediate position. This is common when the integration uses a simple magnetic contact sensor rather than a motor controller:
+- There is no `opening`, `closing`, or percentage-open state
+- The door will show `open` throughout its travel until the closed sensor triggers
+- Do not interpret a lingering `open` state during travel as a failure
+
+Check the home appendix (`*-home.md`) for the specific sensor type used in this installation. If covers report only binary states, treat any non-confirmed close command as "command sent, verify with ha-status after allowing travel time".
+
 ## References
 
 - `skills/hass-cli/references/services.md`
