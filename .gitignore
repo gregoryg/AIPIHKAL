@@ -1,6 +1,7 @@
 gptel-build-directives.el
 uncropped-images/**
 .env
+skills/hass-cli/.env
 skills/agents-and-council-of-llms/transcripts/
 **/*.org_archive
 **/test-skills*.org

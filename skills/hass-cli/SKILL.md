@@ -21,19 +21,29 @@ The home file is gitignored (it may contain private information).
 
 **Binary location:** `~/.local/python-venvs/boodle/bin/hass-cli` (or see if it's in the path already with `which hass-cli`)
 
-**Secret Management (Secure Injection):**
-Load `HASS_TOKEN` from `.env` or - if not there - load it securely:
+**Secret Management (Prefer `.env`, retain fancy-person mode as fallback):**
+
+Default setup:
 
 ```bash
-source skills/common/secrets.sh
-load_hass_token
-export HASS_SERVER=${HASS_SERVER:-http://172.16.17.7:8123}
+cp skills/hass-cli/.env.template skills/hass-cli/.env
+$EDITOR skills/hass-cli/.env
 ```
 
-**Alternative (One-liner):**
+Then the wrappers auto-load configuration via:
+
 ```bash
-export HASS_TOKEN=$(gpg --decrypt ~/.authinfo.gpg 2>/dev/null | grep "machine ha-mcp-token" | awk '{for(i=1;i<=NF;i++) if($i=="password") print $(i+1)}')
+source skills/hass-cli/scripts/ha-env.sh
 ```
+
+Load order:
+1. existing exported environment variables
+2. `skills/hass-cli/.env`
+3. repo-root `.env`
+4. current-directory `.env`
+5. `~/.authinfo.gpg` (`machine ha-mcp-token`) for `HASS_TOKEN` only
+
+`HASS_SERVER` and `HASS_TOKEN` must both be set before wrapper execution continues.
 
 ## Primary workflow: use the wrappers first
 
@@ -48,7 +58,7 @@ In this repo, prefer the wrapper scripts in `skills/hass-cli/scripts/` before fa
 
 ### Wrapper scripts
 
-These scripts auto-load the token, set a default `HASS_SERVER` if one is not already exported, and return compact, decision-ready JSON.
+These scripts auto-load Home Assistant config through `ha-env.sh` and return compact, decision-ready JSON.
 
 ### Quick decision table for weaker tool-calling models
 

@@ -40,7 +40,7 @@ except ImportError:
     print(json.dumps({"status": "infrastructure_error", "message": "websockets library not found"}))
     sys.exit(3)
 
-HASS_SERVER = os.environ.get("HASS_SERVER", "http://172.16.17.7:8123")
+HASS_SERVER = os.environ.get("HASS_SERVER", "")
 HASS_TOKEN = os.environ.get("HASS_TOKEN", "")
 HA_CONVERSATION_AGENT = "conversation.home_assistant"
 

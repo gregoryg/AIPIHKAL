@@ -261,7 +261,7 @@ def detect_type_from_uri(uri: str) -> str | None:
 
 def call_rest_service(service: str, payload: dict) -> None:
     """Call a HA service via the REST API (handles nested JSON payloads cleanly)."""
-    hass_server = os.environ.get("HASS_SERVER", "http://172.16.17.7:8123")
+    hass_server = os.environ.get("HASS_SERVER", "")
     token = os.environ.get("HASS_TOKEN", "")
     url = f"{hass_server}/api/services/{service.replace('.', '/', 1)}"
     data = json.dumps(payload).encode()

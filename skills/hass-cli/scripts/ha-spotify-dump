@@ -1,8 +1,5 @@
 #!/bin/bash
 set -euo pipefail
 
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-source "$repo_root/skills/common/secrets.sh"
-load_hass_token
-export HASS_SERVER="${HASS_SERVER:-http://172.16.17.7:8123}"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ha-env.sh"
 exec ~/.local/python-venvs/boodle/bin/python3 "$repo_root/skills/hass-cli/scripts/spotify_dump.py" "$@"

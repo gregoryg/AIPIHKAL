@@ -138,10 +138,22 @@ HA's NLU uses exact entity names and defined aliases — not fuzzy matching. Phr
 
 ## Setup
 
-The shell wrappers automatically:
-- source `skills/common/secrets.sh`
-- call `load_hass_token`
-- set `HASS_SERVER` to `http://172.16.17.7:8123` if not already exported
+Default least-awful setup:
+
+```bash
+cp skills/hass-cli/.env.template skills/hass-cli/.env
+$EDITOR skills/hass-cli/.env
+```
+
+Fill in:
+- `HASS_SERVER`
+- `HASS_TOKEN`
+
+The shell wrappers now all:
+- source `skills/hass-cli/scripts/ha-env.sh`
+- load `skills/hass-cli/.env` first
+- fall back to `~/.authinfo.gpg` only if needed
+- fail fast with a clear message if `HASS_SERVER` or `HASS_TOKEN` is still missing
 
 ### Spotify wrappers
 

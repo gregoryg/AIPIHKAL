@@ -527,7 +527,7 @@ def main() -> int:
                 "message": str(exc),
                 "hint": (
                     "Ensure HASS_SERVER and HASS_TOKEN are set. "
-                    f"Try sourcing {REPO_ROOT / 'skills/common/secrets.sh'} and exporting HASS_SERVER."
+                    f"Try copying {REPO_ROOT / 'skills/hass-cli/.env.template'} to .env and sourcing {REPO_ROOT / 'skills/hass-cli/scripts/ha-env.sh'}."
                 ),
             }
         )

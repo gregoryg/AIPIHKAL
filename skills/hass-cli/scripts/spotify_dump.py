@@ -41,7 +41,7 @@ except ImportError:
     sys.exit(3)
 
 SPOTIFY_ENTITY = os.environ.get("HA_SPOTIFY_ENTITY", "media_player.spotify_gortsleigh")
-HASS_SERVER = os.environ.get("HASS_SERVER", "http://172.16.17.7:8123")
+HASS_SERVER = os.environ.get("HASS_SERVER", "")
 HASS_TOKEN = os.environ.get("HASS_TOKEN", "")
 MEDIA_PLAYER_PREFIX = "spotify://"
 

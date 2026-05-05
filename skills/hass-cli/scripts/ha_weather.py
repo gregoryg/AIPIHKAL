@@ -27,7 +27,7 @@ except ImportError:
     print("Error: websockets library not found", file=sys.stderr)
     sys.exit(3)
 
-HASS_SERVER   = os.environ.get("HASS_SERVER", "http://172.16.17.7:8123")
+HASS_SERVER   = os.environ.get("HASS_SERVER", "")
 HASS_TOKEN    = os.environ.get("HASS_TOKEN", "")
 WEATHER_ENTITY = os.environ.get("HA_WEATHER_ENTITY", "weather.kapa")
 
