@@ -64,9 +64,9 @@ These scripts auto-load the token, set a default `HASS_SERVER` if one is not alr
   - If `status: no_match` — fall back to `skills/hass-cli/scripts/ha-on "X"` or `ha-off "X"`
 - User asks **run/trigger/activate X**
   - Use `skills/hass-cli/scripts/ha-trigger "X"`
-- User asks **what is the weather / forecast?**
-  - Use `skills/hass-cli/scripts/ha-weather` (week overview)
-  - Use `skills/hass-cli/scripts/ha-weather --tomorrow` or `--today` for hourly detail
+- User asks **anything about weather, temperature, forecast, rain, snow, or conditions**
+  - Use `skills/hass-cli/scripts/ha-weather` — do not attempt raw HA entity queries or external APIs
+  - Add `--tomorrow` or `--today` for hourly detail; `--hourly` for the full week hour by hour
 - User asks **what music can I play / what's in my library?**
   - First check `~/.local/share/ha-spotify/library.txt` (grep it — it's sorted and fast)
   - If stale or missing: run `skills/hass-cli/scripts/ha-spotify-dump` to refresh
