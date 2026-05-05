@@ -64,6 +64,9 @@ These scripts auto-load the token, set a default `HASS_SERVER` if one is not alr
   - If `status: no_match` — fall back to `skills/hass-cli/scripts/ha-on "X"` or `ha-off "X"`
 - User asks **run/trigger/activate X**
   - Use `skills/hass-cli/scripts/ha-trigger "X"`
+- User asks **what is the weather / forecast?**
+  - Use `skills/hass-cli/scripts/ha-weather` (week overview)
+  - Use `skills/hass-cli/scripts/ha-weather --tomorrow` or `--today` for hourly detail
 - User asks **what music can I play / what's in my library?**
   - First check `~/.local/share/ha-spotify/library.txt` (grep it — it's sorted and fast)
   - If stale or missing: run `skills/hass-cli/scripts/ha-spotify-dump` to refresh
@@ -98,6 +101,13 @@ skills/hass-cli/scripts/ha-off "light.living_room"
 # Higher-level actions (scenes, scripts, named automations)
 skills/hass-cli/scripts/ha-trigger "good night"
 skills/hass-cli/scripts/ha-trigger "bar on quickie"
+
+# Weather
+skills/hass-cli/scripts/ha-weather
+skills/hass-cli/scripts/ha-weather --tomorrow
+skills/hass-cli/scripts/ha-weather --today
+skills/hass-cli/scripts/ha-weather --hourly   # full week, hourly detail
+skills/hass-cli/scripts/ha-weather --json     # raw JSON for LLM use
 
 # Spotify on HEOS — transport and routing
 skills/hass-cli/scripts/ha-spotify-target "Music Room"
@@ -262,6 +272,15 @@ Important nuance:
   - HA's NLU uses exact entity names and aliases, not fuzzy matching — phrases that work via voice work here; invented phrasings likely will not
   - **use this first for room-level or area-level commands** ("turn off bathroom", "good morning", "movie time") where a custom automation may be the correct action
   - do not use this as a general replacement for `ha-on`/`ha-off` — it is a complement, not a substitute
+
+- `ha-weather`
+  - fetches forecast from the HA weather entity via the WebSocket `get_forecasts` service
+  - default (no args): week overview using `twice_daily` periods — day/night pairs with condition, temperature, and precipitation probability
+  - `--today` / `--tomorrow`: hourly detail for that day
+  - `--hourly`: full hourly detail for the week
+  - `--json`: raw JSON output for programmatic use
+  - weather entity is read from `HA_WEATHER_ENTITY` env var — set this in your home's `.env` or shell wrapper to point at the right entity for your installation
+  - uses the HA WebSocket API (not `hass-cli`) — requires `twice_daily` or `hourly` forecast type support from the entity; `daily` is not universally supported
 
 - `ha-spotify-browse`
   - uses the HA WebSocket API to browse the Spotify library (not hass-cli)
@@ -433,3 +452,5 @@ hass-cli -o table state list 'light.*'
 - `skills/hass-cli/scripts/ha-spotify-dump`
 - `skills/hass-cli/scripts/ha_intent.py`
 - `skills/hass-cli/scripts/ha-intent`
+- `skills/hass-cli/scripts/ha_weather.py`
+- `skills/hass-cli/scripts/ha-weather`

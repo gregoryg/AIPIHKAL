@@ -144,6 +144,15 @@ Things that will silently go wrong without this knowledge.
 
 ---
 
+## Weather
+
+- **Entity:** `weather.YOUR_ENTITY` (find with `hass-cli -o json state list 'weather.*'`)
+- **Env var:** set `HA_WEATHER_ENTITY=weather.YOUR_ENTITY` in `.env` or export before running `ha-weather`
+- **Supported forecast types:** check which of `hourly`, `twice_daily`, `daily` your entity supports
+  - NWS-based entities typically support `hourly` and `twice_daily` but not `daily`
+  - Other integrations (OpenWeatherMap, Met.no, etc.) may differ
+- **Location notes:** [e.g. nearest NWS station, elevation, any local quirks]
+
 ## Guest information
 
 > ⚠ This section contains private information. Keep this file out of git.

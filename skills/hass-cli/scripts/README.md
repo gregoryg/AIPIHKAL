@@ -91,6 +91,22 @@ Supported triggerable domains:
 
 If the best match is ambiguous, the script returns candidate matches and does not act unless `--all` is explicitly requested.
 
+### `ha-weather`
+Fetch weather forecast from the HA weather entity.
+
+```bash
+skills/hass-cli/scripts/ha-weather               # week overview (twice-daily)
+skills/hass-cli/scripts/ha-weather --tomorrow    # tomorrow hourly
+skills/hass-cli/scripts/ha-weather --today       # today hourly
+skills/hass-cli/scripts/ha-weather --hourly      # full week hourly
+skills/hass-cli/scripts/ha-weather --json        # raw JSON
+```
+
+Uses the HA WebSocket `get_forecasts` service. The weather entity is read from
+`HA_WEATHER_ENTITY` (default: `weather.kapa`). Set this in `.env` for other installations.
+Not all entities support all forecast types — NWS supports `hourly` and `twice_daily`;
+`daily` is not universally available.
+
 ### `ha-intent`
 Send a natural-language phrase through HA's built-in intent pipeline — the same path as a voice command via HA Assist.
 
