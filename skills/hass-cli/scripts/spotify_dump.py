@@ -27,6 +27,8 @@ import asyncio
 import json
 import os
 import sys
+import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -109,15 +111,24 @@ def spotify_api_get(path: str, token: str, params: dict | None = None) -> Any:
     """Make a GET request to the Spotify API. Returns parsed JSON."""
     url = f"{SPOTIFY_API_BASE}/{path}"
     if params:
-        query = "&".join(f"{k}={v}" for k, v in params.items())
+        query = urllib.parse.urlencode(params)
         url = f"{url}?{query}"
     req = urllib.request.Request(
         url,
         headers={"Authorization": f"Bearer {token}"},
         method="GET",
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode()
+            detail = json.loads(body).get("error", {}).get("message", body)
+        except Exception:
+            detail = body or str(exc)
+        raise RuntimeError(f"Spotify API {exc.code}: {detail}") from exc
 
 
 def fetch_all_followed_artists(spotify_token: str) -> list[dict[str, Any]]:
