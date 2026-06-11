@@ -1,6 +1,6 @@
 ---
 name: spotify-cli
-description: "Use the standalone spotify-cli command-line tool to authenticate with Spotify, inspect playback, control devices and playback, search the catalog, manage playlists, inspect albums, and save or remove library items. Trigger this skill when a local machine has spotify-cli installed or when the user points you at a repo or virtualenv containing it. The skill includes guidance for locating the binary, handling headless auth, curating vibe-based playlists, and declining clearly if spotify-cli is not available."
+description: "Use the standalone spotify-cli command-line tool to authenticate with Spotify, inspect playback, control devices and playback, search the catalog, manage playlists, inspect albums, navigate podcast shows and episodes, and save or remove library items. Trigger this skill when a local machine has spotify-cli installed or when the user points you at a repo or virtualenv containing it. The skill includes guidance for locating the binary, handling headless auth, curating vibe-based playlists, navigating podcasts, and declining clearly if spotify-cli is not available."
 ---
 
 # spotify-cli
@@ -46,12 +46,31 @@ The CLI is JSON-first already; `--compact` just makes it less chatty on the wire
 
 ## Auth workflow
 
-Required environment variables are usually:
+Preferred durable setup: use the local config file:
+- `${XDG_CONFIG_HOME:-~/.config}/spotify-cli/spotify-cli.conf`
+
+Example:
+
+```ini
+[spotify]
+client_id = your-client-id
+redirect_uri = http://127.0.0.1:43827/spotify/callback
+cache_path = ~/.cache/spotify-cli/token.json
+```
+
+Useful setup/inspection commands:
+
+```bash
+spotify-cli config init --client-id "your-client-id"
+spotify-cli config show
+spotify-cli doctor
+```
+
+Environment variables still override config-file values when needed:
 - `SPOTIFY_CLIENT_ID`
 - `SPOTIFY_REDIRECT_URI`
-
-Optional:
 - `SPOTIFY_CACHE_PATH`
+- `SPOTIFY_CONFIG_FILE`
 
 Compatibility aliases may also work:
 - `SPOTIPY_CLIENT_ID`
@@ -67,6 +86,8 @@ spotify-cli auth logout
 
 For headless or remote usage, read `references/headless-auth.md`.
 
+If a cached token exists but auth still looks broken, suspect missing client-id configuration before assuming the token itself is dead. With a valid configured client id, stale-token refresh should usually happen automatically through Spotipy.
+
 ## Command families
 
 - `auth` — login, logout, status
@@ -74,9 +95,11 @@ For headless or remote usage, read `references/headless-auth.md`.
 - `playback` — state, current, play, pause, next, previous, seek, repeat, shuffle, volume, recently-played
 - `queue` — get and add
 - `search` — catalog search
-- `search-and-play` — convenience command for finding a likely track match and starting playback immediately
+- `search-and-play` — convenience command for finding a likely track, artist, album, or playlist match and starting playback immediately
 - `playlists` — list, get, create, add-items, remove-items, update
 - `albums` — get, tracks
+- `shows` — get, episodes
+- `episodes` — get
 - `library tracks` — list, save, remove
 - `library albums` — list, save, remove
 
@@ -125,6 +148,22 @@ spotify-cli --compact search "kind of blue" --type track --limit 5
 spotify-cli --compact playback play --uri spotify:track:...
 ```
 
+### Play a specific artist, album, or playlist result
+
+`search-and-play` accepts one explicit type for non-track playback targets:
+
+```bash
+spotify-cli --compact search-and-play --type artist "Lyle Lovett"
+spotify-cli --compact search-and-play --type album "The Road to Ensenada"
+spotify-cli --compact search-and-play --type playlist "Bossa Nova"
+```
+
+Allowed `search-and-play --type` values are:
+- `track` (default)
+- `artist`
+- `album`
+- `playlist`
+
 ### Play an album, playlist, or artist context
 
 Search for the context type, then pass its URI with `--context-uri`.
@@ -170,6 +209,25 @@ spotify-cli --compact library albums save <album-id-or-uri>
 spotify-cli --compact library albums remove <album-id-or-uri>
 ```
 
+### Find recent podcast episodes
+
+Podcasts are navigated as `show -> episodes`, not as tracks.
+
+Typical flow:
+1. search for the podcast as a show
+2. inspect the top show hit
+3. fetch that show's episodes
+4. treat the first returned episode as the most recent visible result unless you have reason to think otherwise
+
+```bash
+spotify-cli --compact search "No Hay Tos" --type show --limit 5
+spotify-cli --compact shows get spotify:show:...
+spotify-cli --compact shows episodes spotify:show:... --limit 10
+spotify-cli --compact episodes get spotify:episode:...
+```
+
+If the user asks for "the latest episode" of a podcast, this is the path to use.
+
 ## Discovery and vibe-based curation
 
 When the user wants a mood, lane, or side-door discovery path rather than exact title matching, do not just parrot the first search hit.
@@ -181,6 +239,16 @@ Read `references/curation-patterns.md` for the fuller pattern. Short version:
 
 ## Failure modes and caveats
 
+Before digging too far, prefer:
+
+```bash
+spotify-cli doctor
+spotify-cli auth status
+```
+
+They should tell you whether the config file was found, whether the client id came from config or env, whether the cache exists, and whether the token is currently usable.
+
+
 Read `references/failure-modes.md` when commands fail or when playback behavior seems inconsistent.
 
 Important short list:
@@ -188,12 +256,13 @@ Important short list:
 - Premium is usually required for playback mutation
 - `playback current` returning 204-style empty output just means nothing is playing
 - shuffle mutation is lossy when Smart Shuffle is active; plain shuffle can be restored, Smart Shuffle generally cannot through the current Web API surface
+- show/episode visibility may reflect the authenticated user's account view, including linked premium/supporter feeds such as Patreon-connected podcast variants
 
 ## URI, URL, and ID inputs
 
 The CLI accepts Spotify items in three common forms:
-- URI: `spotify:track:...`
-- URL: `https://open.spotify.com/track/...`
+- URI: `spotify:track:...`, `spotify:show:...`, `spotify:episode:...`
+- URL: `https://open.spotify.com/track/...`, `https://open.spotify.com/show/...`, `https://open.spotify.com/episode/...`
 - bare ID: `...`
 
 Use full URIs when possible. Search results already return them.
