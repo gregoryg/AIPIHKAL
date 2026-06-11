@@ -74,6 +74,7 @@ For headless or remote usage, read `references/headless-auth.md`.
 - `playback` — state, current, play, pause, next, previous, seek, repeat, shuffle, volume, recently-played
 - `queue` — get and add
 - `search` — catalog search
+- `search-and-play` — convenience command for finding a likely track match and starting playback immediately
 - `playlists` — list, get, create, add-items, remove-items, update
 - `albums` — get, tracks
 - `library tracks` — list, save, remove
@@ -105,10 +106,22 @@ spotify-cli --compact playback volume 50
 
 ### Play a specific track
 
-Search first, then play the resulting track URI.
+Prefer the convenience command when it is sufficient:
 
 ```bash
-spotify-cli --compact search "kind of blue" --type track --limit 1
+spotify-cli --compact search-and-play "take five"
+```
+
+For inspection without mutation:
+
+```bash
+spotify-cli --compact search-and-play "take five" --dry-run
+```
+
+If you need manual control over the selected result, use the explicit two-step flow:
+
+```bash
+spotify-cli --compact search "kind of blue" --type track --limit 5
 spotify-cli --compact playback play --uri spotify:track:...
 ```
 

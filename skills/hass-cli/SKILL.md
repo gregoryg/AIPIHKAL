@@ -7,6 +7,24 @@ description: Control and query Home Assistant via the hass-cli Python CLI. Use w
 
 Control Home Assistant via the `hass-cli` Python CLI.
 
+## Read this first
+
+House-specific doctrine overrides this generic skill.
+
+If both of these are loaded:
+- `hass-cli`
+- a home-specific skill such as `casona-ranona-home`
+
+then the house skill wins on:
+- whether to use `ha-intent` first
+- which alias/entity a phrase maps to
+- whether a command is a reviewed direct-control case
+
+Casona Ranona example:
+- `bar light` is a reviewed direct-control case
+- do not try `ha-intent` first
+- use `ha-on` or `ha-off` directly
+
 ## Home context appendix
 
 If a `*-home.md` file exists in `skills/hass-cli/`, **read it before proceeding**. It contains
@@ -20,6 +38,15 @@ The home file is gitignored (it may contain private information).
 ## Configuration
 
 **Binary location:** `~/.local/python-venvs/boodle/bin/hass-cli` (or see if it's in the path already with `which hass-cli`)
+
+## Categorized-install pitfall
+
+If this skill is installed under a categorized path such as `smart-home/hass-cli/` instead of a flat `skills/hass-cli/`, older wrapper assumptions may break.
+
+Check `references/categorized-install.md` for the proven compatibility fix. In short:
+- prefer loading `hass-cli/.env` directly from `ha-env.sh`
+- do not assume `skills/common/secrets.sh` exists
+- install `websockets` into the boodle venv for websocket-backed helpers like `ha-intent`
 
 **Secret Management (Prefer `.env`, retain fancy-person mode as fallback):**
 
@@ -60,7 +87,9 @@ In this repo, prefer the wrapper scripts in `skills/hass-cli/scripts/` before fa
 
 These scripts auto-load Home Assistant config through `ha-env.sh` and return compact, decision-ready JSON.
 
-### Quick decision table for weaker tool-calling models
+### Quick decision table
+
+Read the home-specific appendix first. Its direct-control exceptions override this generic table.
 
 - User asks **what is in room/area X?**
   - Use `skills/hass-cli/scripts/ha-area-summary "X"`
@@ -206,6 +235,67 @@ skills/hass-cli/scripts/ha-spotify-next
     - `script` → `script.turn_on`
     - `automation` → `automation.trigger`
 
+### Timer guidance: HA timers vs Wyoming Satellite timers
+
+If the user asks to start or manage a timer, first distinguish which timer system they mean.
+
+Use raw Home Assistant timer services when working with actual `timer.*` entities:
+- `timer.start`
+- `timer.pause`
+- `timer.cancel`
+- `timer.finish`
+- `timer.change`
+
+Important observed behavior:
+- `hass-cli service call timer.start ...` may return `[]` even when the timer started successfully
+- verify success by checking timer state afterward with `hass-cli -o json state get timer.some_timer`
+- if the user reports that `timer.start` "did nothing", inspect `state list 'timer.*'` and confirm the target entity actually exists
+
+Do not assume Home Assistant timers reproduce Wyoming Satellite local timer behavior.
+
+Observed distinction in this environment:
+- satellite-originated voice assistant sessions may have `HassTimer*` tools
+- those create/manage timers local to the originating Wyoming Satellite device and use timer start/finish hooks there
+- Web UI / laptop-originated sessions do not have those tools
+- therefore raw `hass-cli` timer calls cannot by themselves recreate behaviors like beeping on the originating puck or running the satellite's local `notify-send` / speech hook
+
+If the user wants portable, cross-channel timer behavior from Hermes itself, that is a separate local timer system concern, not a `hass-cli` wrapper concern.
+
+Observed adjacent pitfall from the portable Hermes timer workflow in this environment:
+- remote finish actions sent over SSH need the remote command wrapped as one quoted command string, not bare tokenized arguments
+- `ssh host notify-send {label} {message}` is brittle once placeholders expand to text with spaces
+- prefer `ssh host "notify-send {label} {message}"`, with placeholder values shell-quoted before interpolation
+- writing a timer outbox file is not the same thing as Slack delivery; treat remote notify, outbox creation, and Slack send as separate verifications
+
+See `skills/hass-cli/references/timers.md` for the full distinction and verification pattern.
+
+### Timer caveat: Home Assistant timers vs Wyoming Satellite timers
+
+Raw `hass-cli` can control normal Home Assistant timer entities with services like:
+- `timer.start`
+- `timer.pause`
+- `timer.cancel`
+- `timer.finish`
+- `timer.change`
+
+Important nuance:
+- a successful `hass-cli service call timer.start ...` may return `[]` or no interesting payload
+- this does **not** necessarily mean failure
+- verify by reading the timer state afterward (`hass-cli -o json state get timer.<name>`) and checking for `state: active`, `remaining`, and `finishes_at`
+
+Do **not** assume HA timer entities reproduce the voice-assistant timer behavior seen on Wyoming Satellite devices.
+
+Wyoming Satellite timer behavior is separate:
+- satellite-originated LLM sessions may expose `HassTimer*` tools
+- those tools create/manage timers local to the originating satellite
+- Wyoming uses satellite-local timer start/finish hooks for beeps, TTS, and device-specific notifications
+- Web UI / laptop sessions generally do **not** have `HassTimer*` tools available
+
+Practical implication:
+- use raw `hass-cli` timer services for HA timer entities only
+- do not promise that `timer.start` from a laptop/Web UI session will recreate puck-local or satellite-local timer UX
+- if the human needs cross-channel or machine-local timer behavior from Hermes, use a separate portable timer workflow rather than pretending HA timers and Wyoming timers are the same thing
+
 ### Guidance for automations with variable schedules
 
 If a human wants an automation to run at a user-chosen future date/time, do **not** assume the right approach is to edit the automation definition itself.
@@ -276,10 +366,12 @@ Important nuance:
 - `ha-intent`
   - sends a natural-language phrase through HA's built-in intent pipeline (`conversation.home_assistant`)
   - this is the same path as voice commands via HA Assist — custom intent phrases and automation-backed phrases fire correctly
+  - think of it as a **fast first pass for explicitly-defined intents/phrases**, not as fuzzy discovery
   - returns `status: ok` with `response_type: action_done` when the intent matched and executed
   - `action_done` with an empty `success` list is normal for automation-triggered intents — the automation fired but HA does not report individual entity outcomes
-  - returns `status: no_match` when HA does not recognise the phrase — caller should fall back to `ha-on`/`ha-off`/`ha-trigger`
-  - HA's NLU uses exact entity names and aliases, not fuzzy matching — phrases that work via voice work here; invented phrasings likely will not
+  - returns `status: no_match` when HA does not recognise the phrase — this is expected behavior when no matching intent/phrase is defined, and caller should immediately fall back to `ha-on`/`ha-off`/`ha-trigger`
+  - HA may also surface a WebSocket-level `unknown_error` for an unrecognised phrase; in practice treat that the same as `no_match` and fall back rather than treating it as a broken integration
+  - HA's NLU uses exact entity names and aliases, not fuzzy matching — phrases that work via voice or explicit intent definitions work here; invented phrasings likely will not
   - **use this first for room-level or area-level commands** ("turn off bathroom", "good morning", "movie time") where a custom automation may be the correct action
   - do not use this as a general replacement for `ha-on`/`ha-off` — it is a complement, not a substitute
 
@@ -307,6 +399,8 @@ Important nuance:
   - use `--target ROOM` to select a playback destination in the same command
   - if Spotify is idle when called, HA will attempt to route to the first available Spotify Connect device — prefer targeting explicitly
   - works for any valid Spotify URI, including ones not in the user's library
+  - on HEOS targets, the Spotify entity may flip to `playing` before the room player catches up; an immediate corroboration check can briefly show the target player as `paused`
+  - if that happens, wait a few seconds and re-run `ha-spotify-status` before treating it as a routing failure
 
 - `ha-spotify-dump`
   - dumps all available Spotify library sections to `~/.local/share/ha-spotify/library.txt` (grep-friendly) and `library.json`
@@ -373,6 +467,23 @@ Use this reasoning path:
 - Read the `best_matches` or area entities and answer from their `state` values.
 - Do not use `ha-find` first unless `ha-status` is insufficient.
 
+## Categorized Layout Pitfalls
+
+If the skill is installed under a categorized directory (e.g. `skills/smart-home/hass-cli/` instead of the expected flat `skills/hass-cli/`), the wrapper scripts' path assumptions break. Symptoms:
+
+- `ha-env.sh` can't find `skills/common/secrets.sh`
+- Wrapper scripts fail with `repo_root: unbound variable` or file-not-found errors for Python scripts
+
+**Fix (temporary until repackaging):**
+1. In `ha-env.sh`, set `repo_root` to the categorized parent (e.g. `~/.hermes/skills/smart-home`)
+2. Create a compatibility symlink: `skills/smart-home/skills/hass-cli → ../hass-cli` so `$repo_root/skills/hass-cli/scripts/` resolves
+3. Ensure `.env` is sourced directly in `ha-env.sh` (the original `skills/common/secrets.sh` may not exist)
+
+**Missing Python packages:** `ha-intent.py` requires `websockets` in the venv used by the wrapper (`boodle` if using `~/.local/python-venvs/boodle/bin/python3`). Install with:
+```bash
+~/.local/python-venvs/boodle/bin/pip install websockets
+```
+
 ## Important implementation note
 
 A very useful escape hatch is `hass-cli template`, which can access Home Assistant Jinja helpers such as:
@@ -437,6 +548,30 @@ hass-cli -o json state list 'light.*'
 hass-cli -o table state list 'light.*'
 ```
 
+## Fresh install pitfalls
+
+When this skill is installed in the categorized layout (`skills/smart-home/hass-cli/`), several things can break on first use. See `references/fresh-install.md` for the full fix log; the key issues:
+
+1. **`ha-env.sh` path resolution.** The wrapper scripts expect `$repo_root/skills/hass-cli/scripts/<file>`. In the categorized layout, `repo_root` must be set to `skills/smart-home/` (not `skills/`). The patched `ha-env.sh` handles this — verify it hasn't been overwritten by a skill update.
+
+2. **Missing symlink.** Even with correct `repo_root`, the wrappers reference `$repo_root/skills/hass-cli/` which adds an extra `skills/` segment. Create a symlink:
+   ```bash
+   mkdir -p ~/.hermes/skills/smart-home/skills
+   ln -s ~/.hermes/skills/smart-home/hass-cli ~/.hermes/skills/smart-home/skills/hass-cli
+   ```
+
+3. **Missing `websockets` Python package.** `ha-intent`, `ha-weather`, `ha-spotify-browse`, and `ha-spotify-dump` use `~/.local/python-venvs/boodle/bin/python3` and require `websockets`:
+   ```bash
+   ~/.local/python-venvs/boodle/bin/pip install websockets
+   ```
+
+4. **Missing `skills/common/secrets.sh`.** The original skill expected a shared secrets module. The patched `ha-env.sh` loads credentials directly from the `.env` file instead — no `secrets.sh` needed.
+
+After fixing, verify with:
+```bash
+~/.hermes/skills/smart-home/hass-cli/scripts/ha-find "any entity name"
+```
+
 ## Limitations
 
 - `hass-cli info` uses a deprecated endpoint and may fail.
@@ -457,8 +592,11 @@ Check the home appendix (`*-home.md`) for the specific sensor type used in this 
 
 ## References
 
+- `skills/hass-cli/references/fresh-install.md` — install troubleshooting (path resolution, missing deps, symlink fix)
 - `skills/hass-cli/references/services.md`
 - `skills/hass-cli/references/scheduling.md`
+- `skills/hass-cli/references/timers.md` — distinction between HA `timer.*` entities and Wyoming Satellite local timers; includes verification pattern for `timer.start`
+- `skills/hass-cli/references/portable-timer-delivery.md` — SSH quoting and sink-by-sink verification notes for portable Hermes timer finish actions in this environment
 - `skills/hass-cli/scripts/README.md`
 - `skills/hass-cli/scripts/ha_resolve.py`
 - `skills/hass-cli/scripts/ha-status`
