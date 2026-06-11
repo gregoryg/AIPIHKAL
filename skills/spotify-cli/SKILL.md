@@ -249,6 +249,16 @@ Read `references/curation-patterns.md` for the fuller pattern. Short version:
 - prefer a coherent sequence over a heap of plausible tracks
 - build a playlist seed that Spotify can then extend with its own shuffle or Smart Shuffle behavior
 
+For iterative playlist building, use a curation-first loop:
+1. infer the thesis
+2. choose a few strong anchor tracks or artists
+3. run targeted searches against the Spotify catalog
+4. widen carefully from the good hits
+5. build a coherent seed playlist
+6. iterate by pruning and adding, rather than assuming the first pass is done
+
+This is especially relevant now that Spotify's old recommendations endpoints are gone. The workflow still works; it just depends on search, inspection, and taste rather than a recommendation API that no longer exists.
+
 ## Failure modes and caveats
 
 Before digging too far, prefer:
@@ -269,6 +279,7 @@ Important short list:
 - `playback current` returning 204-style empty output just means nothing is playing
 - shuffle mutation is lossy when Smart Shuffle is active; plain shuffle can be restored, Smart Shuffle generally cannot through the current Web API surface
 - show/episode visibility may reflect the authenticated user's account view, including linked premium/supporter feeds such as Patreon-connected podcast variants
+- Spotify's old recommendations endpoints have been removed from the Web API; Spotipy still exposes deprecated wrappers, but live calls now return 404
 
 ## URI, URL, and ID inputs
 
