@@ -102,6 +102,8 @@ If a cached token exists but auth still looks broken, suspect missing client-id 
 - `episodes` — get
 - `library tracks` — list, save, remove
 - `library albums` — list, save, remove
+- `library shows` — list, save, remove
+- `library episodes` — list, save, remove
 
 ## Canonical patterns
 
@@ -125,6 +127,12 @@ spotify-cli --compact playback play
 spotify-cli --compact playback next
 spotify-cli --compact playback previous
 spotify-cli --compact playback volume 50
+```
+
+For direct episode playback:
+
+```bash
+spotify-cli --compact playback play --uri spotify:episode:...
 ```
 
 ### Play a specific track
@@ -207,6 +215,10 @@ spotify-cli --compact library tracks save <track-id-or-uri>
 spotify-cli --compact library tracks remove <track-id-or-uri>
 spotify-cli --compact library albums save <album-id-or-uri>
 spotify-cli --compact library albums remove <album-id-or-uri>
+spotify-cli --compact library shows save <show-id-or-uri>
+spotify-cli --compact library shows remove <show-id-or-uri>
+spotify-cli --compact library episodes save <episode-id-or-uri>
+spotify-cli --compact library episodes remove <episode-id-or-uri>
 ```
 
 ### Find recent podcast episodes
