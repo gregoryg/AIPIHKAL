@@ -46,6 +46,18 @@ The CLI can read `smart_shuffle` when Spotify exposes it, but using the Web API 
 
 Treat shuffle mutation as lossy when Smart Shuffle is active.
 
+## Missing scopes after a local upgrade
+
+If a command that mutates followed artists starts failing with 403 after the CLI was upgraded, suspect an old cached token that predates the new follow scopes.
+
+Usual fix:
+
+```bash
+spotify-cli auth login --force
+```
+
+The CLI may now ask for additional Spotify permissions such as artist follow read/modify.
+
 ## Search result weirdness
 
 Spotify search sometimes returns musically adjacent but semantically wrong top hits. If the user asks for a phrase that could be a song, album, mood, or canonical jazz object lesson, inspect the first result before assuming it is correct.

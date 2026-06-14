@@ -1,6 +1,6 @@
 ---
 name: spotify-cli
-description: "Use the standalone spotify-cli command-line tool to authenticate with Spotify, inspect playback, control devices and playback, search the catalog, manage playlists, inspect albums, navigate podcast shows and episodes, and save or remove library items. Trigger this skill when a local machine has spotify-cli installed or when the user points you at a repo or virtualenv containing it. The skill includes guidance for locating the binary, handling headless auth, curating vibe-based playlists, navigating podcasts, and declining clearly if spotify-cli is not available."
+description: "Use the standalone spotify-cli command-line tool to authenticate with Spotify, inspect playback, control devices and playback, search the catalog, manage playlists, inspect albums and artists, navigate podcast shows and episodes, manage followed artists, and save or remove library items. Trigger this skill when a local machine has spotify-cli installed or when the user points you at a repo or virtualenv containing it. The skill includes guidance for locating the binary, handling headless auth, curating vibe-based playlists, navigating podcasts, and declining clearly if spotify-cli is not available."
 ---
 
 # spotify-cli
@@ -84,6 +84,12 @@ spotify-cli auth login
 spotify-cli auth logout
 ```
 
+If the local checkout recently gained new scopes and existing mutations now fail with a 403, refresh the token grant explicitly:
+
+```bash
+spotify-cli auth login --force
+```
+
 For headless or remote usage, read `references/headless-auth.md`.
 
 If a cached token exists but auth still looks broken, suspect missing client-id configuration before assuming the token itself is dead. With a valid configured client id, stale-token refresh should usually happen automatically through Spotipy.
@@ -98,6 +104,7 @@ If a cached token exists but auth still looks broken, suspect missing client-id 
 - `search-and-play` — convenience command for finding a likely track, artist, album, or playlist match and starting playback immediately
 - `playlists` — list, get, create, add-items, remove-items, update
 - `albums` — get, tracks
+- `artists` — get, list-followed, follow, unfollow
 - `shows` — get, episodes
 - `episodes` — get
 - `library tracks` — list, save, remove
@@ -221,6 +228,14 @@ spotify-cli --compact library episodes save <episode-id-or-uri>
 spotify-cli --compact library episodes remove <episode-id-or-uri>
 ```
 
+Artists are not library saves in Spotify's model; they are a separate follow surface.
+
+```bash
+spotify-cli --compact artists list-followed --limit 10
+spotify-cli --compact artists follow <artist-id-or-uri>
+spotify-cli --compact artists unfollow <artist-id-or-uri>
+```
+
 ### Find recent podcast episodes
 
 Podcasts are navigated as `show -> episodes`, not as tracks.
@@ -278,14 +293,15 @@ Important short list:
 - Premium is usually required for playback mutation
 - `playback current` returning 204-style empty output just means nothing is playing
 - shuffle mutation is lossy when Smart Shuffle is active; plain shuffle can be restored, Smart Shuffle generally cannot through the current Web API surface
+- artist follow/unfollow uses separate follow scopes; after upgrading from an older token cache, re-run `spotify-cli auth login --force` if those commands 403
 - show/episode visibility may reflect the authenticated user's account view, including linked premium/supporter feeds such as Patreon-connected podcast variants
 - Spotify's old recommendations endpoints have been removed from the Web API; Spotipy still exposes deprecated wrappers, but live calls now return 404
 
 ## URI, URL, and ID inputs
 
 The CLI accepts Spotify items in three common forms:
-- URI: `spotify:track:...`, `spotify:show:...`, `spotify:episode:...`
-- URL: `https://open.spotify.com/track/...`, `https://open.spotify.com/show/...`, `https://open.spotify.com/episode/...`
+- URI: `spotify:track:...`, `spotify:artist:...`, `spotify:album:...`, `spotify:show:...`, `spotify:episode:...`
+- URL: `https://open.spotify.com/track/...`, `https://open.spotify.com/artist/...`, `https://open.spotify.com/album/...`, `https://open.spotify.com/show/...`, `https://open.spotify.com/episode/...`
 - bare ID: `...`
 
 Use full URIs when possible. Search results already return them.
