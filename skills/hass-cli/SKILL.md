@@ -27,26 +27,43 @@ Casona Ranona example:
 
 ## Home context appendix
 
-If a `*-home.md` file exists in `skills/hass-cli/`, **read it before proceeding**. It contains
+If a home-specific appendix or companion skill exists, **read it before proceeding**. It contains
 home-specific context that this generic skill cannot know: device naming conventions, area quirks,
 verified `ha-intent` phrases, resident names, and semantic mappings that are invisible in the
 entity registry. Without it, you will make confident wrong guesses about amusingly named lights.
 
-A template lives at `skills/hass-cli/YOUR_HOME_NAME-home.md.template`.
-The home file is gitignored (it may contain private information).
+Casona Ranona note:
+- the reviewed home doctrine lives in the separate `casona-ranona-home` skill
+- do not assume there is a `*-home.md` file inside `skills/hass-cli/` for this profile
+
+A template for file-based home appendices lives at `skills/hass-cli/YOUR_HOME_NAME-home.md.template`.
+A file-based home appendix may be gitignored if it contains private information.
 
 ## Configuration
 
-**Binary location:** `~/.local/python-venvs/boodle/bin/hass-cli` (or see if it's in the path already with `which hass-cli`)
+**Binary location:** `/home/hermes/.local/python-venvs/boodle/bin/hass-cli`
+
+In this profile, when using Hermes `terminal`, prefer absolute paths for both the binary and wrapper scripts. Do not rely on `~`, `$HOME`, or relative `skills/...` paths from the examples unless you are in an interactive shell and know exactly what they expand to.
 
 ## Categorized-install pitfall
 
 If this skill is installed under a categorized path such as `smart-home/hass-cli/` instead of a flat `skills/hass-cli/`, older wrapper assumptions may break.
 
+Current Casona Ranona profile note:
+- the live skill path is `~/.hermes/profiles/casona-ranona-ha/skills/hass-cli` (flat layout)
+- `ha-env.sh` should therefore detect the live layout instead of assuming categorized install
+- categorized install is still supported as a fallback for older/symlinked setups
+
 Check `references/categorized-install.md` for the proven compatibility fix. In short:
 - prefer loading `hass-cli/.env` directly from `ha-env.sh`
 - do not assume `skills/common/secrets.sh` exists
+- if wrappers hardcode `$repo_root/skills/hass-cli/...`, either detect the flat live path correctly or add a compatibility symlink under `smart-home/skills/hass-cli`
 - install `websockets` into the boodle venv for websocket-backed helpers like `ha-intent`
+
+Important shell pitfall:
+- do not write wrapper exec paths as `~/.local/...` inside scripts
+- in this profile, do not assume `$HOME` points at `/home/hermes`; it may point at a profile-scoped home instead
+- for the boodle interpreter wrappers, prefer the known absolute path `/home/hermes/.local/...`
 
 **Secret Management (Prefer `.env`, retain fancy-person mode as fallback):**
 
@@ -234,6 +251,38 @@ skills/hass-cli/scripts/ha-spotify-next
     - `scene` → `scene.turn_on`
     - `script` → `script.turn_on`
     - `automation` → `automation.trigger`
+
+### Power-topology pitfall: smart switch upstream, smart light downstream
+
+Some Home Assistant installs contain the deeply unserious topology where a **smart switch cuts power to a smart light**.
+
+What this means operationally:
+- when the upstream switch is off, the downstream smart light can disappear from HA entirely or show `unavailable`
+- after turning the switch on, the light entity may take a couple of seconds to rejoin and report state
+- a follow-up status check run too quickly can make it look like the switch command failed when in fact the light is just booting back into existence
+
+How to handle it:
+1. If a room contains both `switch.*` and `light.*` entities and one light is `unavailable`, consider whether the switch may be upstream power rather than an independent load.
+2. Turn on the upstream switch first.
+3. Wait briefly, then re-check the light entity before declaring failure.
+4. Prefer controlling the true upstream device for reliability; the downstream smart light is only controllable when powered.
+
+This is especially important when a user reports that "the switch did turn on" while your immediate post-check still shows the light unavailable. Believe topology before inventing ghosts.
+
+### Raw hass-cli pitfall: auto-discovery can hit the wrong HA server
+
+If you call raw `hass-cli` directly without loading the environment first, it may try local-network auto-discovery and connect to the wrong Home Assistant server.
+
+Symptoms:
+- `Trying to locate Home Assistant on local network...`
+- `Found and using http://... as server`
+- service calls fail even though the wrappers work
+
+Preferred fixes:
+- use the wrapper scripts in this skill first; they source `ha-env.sh` for you
+- if you must use raw `hass-cli`, source `scripts/ha-env.sh` first or pass explicit server/token config
+
+Do not treat wrapper success + raw CLI failure as an HA outage until you've ruled out bad auto-discovery.
 
 ### Timer guidance: HA timers vs Wyoming Satellite timers
 
