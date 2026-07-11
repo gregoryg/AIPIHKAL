@@ -11,19 +11,18 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterable
-from pathlib import Path
 from typing import Any
 
 DEFAULT_HASS_CLI = os.environ.get("HASS_CLI_BIN", "hass-cli")
 DEFAULT_CONTROLLABLE_DOMAINS = {"light", "switch", "cover"}
 DEFAULT_TRIGGERABLE_DOMAINS = {"scene", "script", "automation"}
 DEFAULT_ACTIONABLE_DOMAINS = DEFAULT_CONTROLLABLE_DOMAINS | DEFAULT_TRIGGERABLE_DOMAINS
+AREA_CONTEXT_SCORE_CAP = 80
 SEARCH_STOPWORDS = {
     "light", "lights", "switch", "switches", "plug", "plugs", "cover", "covers",
     "scene", "scenes", "script", "scripts", "automation", "automations",
 }
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent.parent
+COMMAND_TIMEOUT = float(os.environ.get("HA_COMMAND_TIMEOUT", "30"))
 
 
 class HassCliError(RuntimeError):
@@ -33,7 +32,16 @@ class HassCliError(RuntimeError):
 def run_hass_json(args: list[str]) -> Any:
     """Run hass-cli and parse JSON output."""
     command = [DEFAULT_HASS_CLI, "-o", "json", *args]
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=COMMAND_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise HassCliError(f"hass-cli timed out after {COMMAND_TIMEOUT:g} seconds") from exc
     if result.returncode != 0:
         raise HassCliError(result.stderr.strip() or result.stdout.strip() or "hass-cli failed")
     try:
@@ -45,7 +53,16 @@ def run_hass_json(args: list[str]) -> Any:
 def run_hass(args: list[str]) -> str:
     """Run hass-cli and return stdout."""
     command = [DEFAULT_HASS_CLI, *args]
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=COMMAND_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise HassCliError(f"hass-cli timed out after {COMMAND_TIMEOUT:g} seconds") from exc
     if result.returncode != 0:
         raise HassCliError(result.stderr.strip() or result.stdout.strip() or "hass-cli failed")
     return result.stdout.strip()
@@ -117,6 +134,27 @@ def score_text(query: str, *values: str | None) -> int:
     return best
 
 
+def score_entity(query: str, entity: dict[str, Any]) -> int:
+    """Score identity fields strongly and area membership only as context."""
+    identity_score = score_text(
+        query,
+        entity["entity_id"],
+        entity["friendly_name"],
+        entity.get("original_name"),
+        entity.get("name_by_user"),
+        *entity.get("aliases", []),
+    )
+    context_score = min(
+        score_text(
+            query,
+            entity.get("area_name"),
+            entity.get("device_name"),
+        ),
+        AREA_CONTEXT_SCORE_CAP,
+    )
+    return max(identity_score, context_score)
+
+
 class Inventory:
     """Joined view of Home Assistant areas, devices, entities, and states."""
 
@@ -163,6 +201,7 @@ class Inventory:
             "platform": entity.get("platform"),
             "original_name": entity.get("original_name"),
             "name_by_user": entity.get("name_by_user"),
+            "aliases": entity.get("aliases") or [],
             "disabled_by": entity.get("disabled_by"),
             "hidden_by": entity.get("hidden_by"),
             "controllable": domain in DEFAULT_CONTROLLABLE_DOMAINS,
@@ -209,15 +248,7 @@ class Inventory:
                 continue
             if controllable_only and not entity["actionable"]:
                 continue
-            score = score_text(
-                query,
-                entity["entity_id"],
-                entity["friendly_name"],
-                entity.get("area_name"),
-                entity.get("device_name"),
-                entity.get("original_name"),
-                entity.get("name_by_user"),
-            )
+            score = score_entity(query, entity)
             if score <= 0:
                 continue
             candidates.append({"score": score, **self.present_entity(entity)})
@@ -243,7 +274,10 @@ class Inventory:
                 if entity["kind"] not in DEFAULT_CONTROLLABLE_DOMAINS:
                     continue
                 existing = by_id.get(entity["entity_id"])
-                area_match = {"score": area["score"], **entity}
+                area_match = {
+                    "score": min(area["score"], AREA_CONTEXT_SCORE_CAP),
+                    **entity,
+                }
                 if existing is None or area_match["score"] > existing.get("score", 0):
                     by_id[entity["entity_id"]] = area_match
 
@@ -300,6 +334,41 @@ def trim(items: Iterable[Any], limit: int) -> list[Any]:
     return list(items)[:limit]
 
 
+def compact_area_match(
+    match: dict[str, Any],
+    *,
+    entity_limit: int | None = None,
+    domains: set[str] | None = None,
+) -> dict[str, Any]:
+    """Return an area match with omitted or bounded entity details."""
+    compact = {key: value for key, value in match.items() if key != "entities"}
+    if entity_limit is None:
+        return compact
+
+    entities = match.get("entities", [])
+    if domains is not None:
+        entities = [entity for entity in entities if entity.get("kind") in domains]
+    compact["entities"] = entities[:entity_limit]
+    compact["matching_entity_count"] = len(entities)
+    compact["entities_truncated"] = len(entities) > entity_limit
+    return compact
+
+
+def relevant_area_matches(
+    area_matches: list[dict[str, Any]],
+    entity_matches: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Drop weaker area context when a more precise entity match exists."""
+    if not entity_matches:
+        return area_matches
+    top_entity_score = entity_matches[0].get("score", 0)
+    return [
+        match
+        for match in area_matches
+        if match.get("score", 0) >= top_entity_score
+    ]
+
+
 def expected_states(kind: str, action: str) -> set[str]:
     """Return acceptable target states after an action."""
     if kind == "cover":
@@ -328,7 +397,10 @@ def poll_state_after_action(entity_id: str, kind: str, action: str) -> tuple[dic
 def command_find(args: argparse.Namespace) -> int:
     """Search areas and entities by human-ish query."""
     inventory = Inventory()
-    area_matches = trim(inventory.area_candidates(args.query), args.limit)
+    area_matches = [
+        compact_area_match(match)
+        for match in trim(inventory.area_candidates(args.query), args.limit)
+    ]
     entity_matches = trim(
         inventory.entity_candidates(args.query, controllable_only=not args.include_all_domains),
         args.limit,
@@ -415,8 +487,24 @@ def command_action(args: argparse.Namespace, action: str) -> int:
 def command_status(args: argparse.Namespace) -> int:
     """Show compact status for matching areas and actionable entities."""
     inventory = Inventory()
-    area_matches = trim(inventory.area_candidates(args.query), args.limit)
-    entity_matches = trim(inventory.entity_candidates(args.query, controllable_only=True), args.limit)
+    raw_area_matches = trim(inventory.area_candidates(args.query), args.limit)
+    entity_matches = trim(
+        (
+            match
+            for match in inventory.entity_candidates(args.query, controllable_only=True)
+            if match["kind"] in DEFAULT_CONTROLLABLE_DOMAINS
+        ),
+        args.limit,
+    )
+    raw_area_matches = relevant_area_matches(raw_area_matches, entity_matches)
+    area_matches = [
+        compact_area_match(
+            match,
+            entity_limit=args.limit,
+            domains=DEFAULT_CONTROLLABLE_DOMAINS,
+        )
+        for match in raw_area_matches
+    ]
     print_json(
         {
             "status": "ok",
@@ -478,7 +566,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     find_parser = subparsers.add_parser("find", help="Search areas and entities")
-    find_parser.add_argument("query", help="Human-ish search query such as 'bar light'")
+    find_parser.add_argument("query", help="Human-readable entity or area query")
     find_parser.add_argument("--limit", type=int, default=8, help="Maximum matches per section")
     find_parser.add_argument(
         "--include-all-domains",
@@ -492,22 +580,22 @@ def build_parser() -> argparse.ArgumentParser:
     area_parser.set_defaults(func=command_area_summary)
 
     status_parser = subparsers.add_parser("status", help="Show compact status for matching areas and entities")
-    status_parser.add_argument("query", help="Human-ish query such as 'garage' or 'bar light'")
+    status_parser.add_argument("query", help="Human-readable entity or area query")
     status_parser.add_argument("--limit", type=int, default=8, help="Maximum matches per section")
     status_parser.set_defaults(func=command_status)
 
     on_parser = subparsers.add_parser("turn-on", help="Turn on or open resolved entities")
-    on_parser.add_argument("query", help="Human-ish query such as 'bar light'")
+    on_parser.add_argument("query", help="Human-readable entity or area query")
     on_parser.add_argument("--all", action="store_true", help="Act on all top-scoring matches")
     on_parser.set_defaults(func=lambda ns: command_action(ns, "on"))
 
     off_parser = subparsers.add_parser("turn-off", help="Turn off or close resolved entities")
-    off_parser.add_argument("query", help="Human-ish query such as 'bar light'")
+    off_parser.add_argument("query", help="Human-readable entity or area query")
     off_parser.add_argument("--all", action="store_true", help="Act on all top-scoring matches")
     off_parser.set_defaults(func=lambda ns: command_action(ns, "off"))
 
     trigger_parser = subparsers.add_parser("trigger", help="Trigger scenes, scripts, or automations")
-    trigger_parser.add_argument("query", help="Human-ish query such as 'good night' or 'movie time'")
+    trigger_parser.add_argument("query", help="Human-readable scene, script, or automation query")
     trigger_parser.add_argument("--all", action="store_true", help="Act on all top-scoring matches")
     trigger_parser.set_defaults(func=command_trigger)
 
@@ -525,10 +613,7 @@ def main() -> int:
             {
                 "status": "error",
                 "message": str(exc),
-                "hint": (
-                    "Ensure HASS_SERVER and HASS_TOKEN are set. "
-                    f"Try copying {REPO_ROOT / 'skills/hass-cli/.env.template'} to .env and sourcing {REPO_ROOT / 'skills/hass-cli/scripts/ha-env.sh'}."
-                ),
+                "hint": "Check HASS_SERVER, HASS_TOKEN, HASS_CLI_BIN, and network access.",
             }
         )
         return 3

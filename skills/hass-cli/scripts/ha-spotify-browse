@@ -1,5 +1,0 @@
-#!/bin/bash
-set -euo pipefail
-
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ha-env.sh"
-exec ~/.local/python-venvs/boodle/bin/python3 "$repo_root/skills/hass-cli/scripts/spotify_browse.py" "$@"

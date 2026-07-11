@@ -19,17 +19,17 @@ import json
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 
 try:
     import websockets
 except ImportError:
-    print("Error: websockets library not found", file=sys.stderr)
-    sys.exit(3)
+    websockets = None
 
 HASS_SERVER   = os.environ.get("HASS_SERVER", "")
 HASS_TOKEN    = os.environ.get("HASS_TOKEN", "")
-WEATHER_ENTITY = os.environ.get("HA_WEATHER_ENTITY", "weather.kapa")
+WEATHER_ENTITY = os.environ.get("HA_WEATHER_ENTITY", "")
+COMMAND_TIMEOUT = float(os.environ.get("HA_COMMAND_TIMEOUT", "30"))
 
 CONDITION_ICON = {
     "sunny": "☀️",  "clear-night": "🌙", "partlycloudy": "⛅",
@@ -45,8 +45,43 @@ def ws_url() -> str:
     return HASS_SERVER.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
 
 
-async def get_forecast(forecast_type: str) -> list[dict]:
-    async with websockets.connect(ws_url()) as ws:
+async def resolve_weather_entity() -> str:
+    """Use the configured entity or discover the only available weather entity."""
+    if websockets is None:
+        raise RuntimeError("websockets library not found; see references/setup.md")
+    if WEATHER_ENTITY:
+        return WEATHER_ENTITY
+
+    async with websockets.connect(
+        ws_url(), open_timeout=COMMAND_TIMEOUT, close_timeout=COMMAND_TIMEOUT
+    ) as ws:
+        await ws.recv()
+        await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
+        auth = json.loads(await ws.recv())
+        if auth.get("type") != "auth_ok":
+            raise RuntimeError("Home Assistant authentication failed")
+        await ws.send(json.dumps({"id": 1, "type": "get_states"}))
+        msg = json.loads(await ws.recv())
+
+    entities = sorted(
+        state["entity_id"]
+        for state in msg.get("result", [])
+        if state.get("entity_id", "").startswith("weather.")
+    )
+    if len(entities) == 1:
+        return entities[0]
+    if not entities:
+        raise RuntimeError("No weather.* entity found; set HA_WEATHER_ENTITY")
+    raise RuntimeError(
+        "Multiple weather entities found; set HA_WEATHER_ENTITY to one of: "
+        + ", ".join(entities)
+    )
+
+
+async def get_forecast(forecast_type: str, weather_entity: str) -> list[dict]:
+    async with websockets.connect(
+        ws_url(), open_timeout=COMMAND_TIMEOUT, close_timeout=COMMAND_TIMEOUT
+    ) as ws:
         await ws.recv()
         await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
         assert json.loads(await ws.recv())["type"] == "auth_ok"
@@ -57,7 +92,7 @@ async def get_forecast(forecast_type: str) -> list[dict]:
             "domain": "weather",
             "service": "get_forecasts",
             "service_data": {"type": forecast_type},
-            "target": {"entity_id": WEATHER_ENTITY},
+            "target": {"entity_id": weather_entity},
             "return_response": True,
         }))
         while True:
@@ -68,11 +103,13 @@ async def get_forecast(forecast_type: str) -> list[dict]:
     if not msg.get("success"):
         raise RuntimeError(f"Forecast error: {msg.get('error', {}).get('message', msg)}")
 
-    return msg["result"]["response"][WEATHER_ENTITY]["forecast"]
+    return msg["result"]["response"][weather_entity]["forecast"]
 
 
-async def current_conditions() -> dict:
-    async with websockets.connect(ws_url()) as ws:
+async def current_conditions(weather_entity: str) -> dict:
+    async with websockets.connect(
+        ws_url(), open_timeout=COMMAND_TIMEOUT, close_timeout=COMMAND_TIMEOUT
+    ) as ws:
         await ws.recv()
         await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
         assert json.loads(await ws.recv())["type"] == "auth_ok"
@@ -85,13 +122,15 @@ async def current_conditions() -> dict:
 
     states = msg.get("result", [])
     for s in states:
-        if s["entity_id"] == WEATHER_ENTITY:
+        if s["entity_id"] == weather_entity:
             a = s["attributes"]
             return {
                 "condition": s["state"],
                 "temperature": a.get("temperature"),
+                "temperature_unit": a.get("temperature_unit", ""),
                 "humidity": a.get("humidity"),
                 "wind_speed": a.get("wind_speed"),
+                "wind_speed_unit": a.get("wind_speed_unit"),
                 "wind_bearing": a.get("wind_bearing"),
             }
     return {}
@@ -121,7 +160,7 @@ def condition_str(condition: str) -> str:
     return f"{icon} {label}".strip()
 
 
-def format_week(forecasts: list[dict]) -> str:
+def format_week(forecasts: list[dict], temperature_unit: str = "") -> str:
     """Render twice-daily forecasts as a human-readable week table."""
     lines = []
     # Group by date
@@ -142,14 +181,18 @@ def format_week(forecasts: list[dict]) -> str:
             cond = condition_str(p.get("condition", ""))
             temp = p.get("temperature", "?")
             prob = p.get("precipitation_probability", 0)
-            return f"{cond:<14} {temp:>3}°F  {prob:>3}%💧"
+            return f"{cond:<14} {temp:>3}{temperature_unit}  {prob:>3}%💧"
 
         lines.append(f"{date:<14} {fmt(day):<22} {fmt(night)}")
 
     return "\n".join(lines)
 
 
-def format_hourly_day(date_str: str, periods: list[dict]) -> str:
+def format_hourly_day(
+    date_str: str,
+    periods: list[dict],
+    temperature_unit: str = "",
+) -> str:
     """Render one day's hourly periods as a compact table."""
     lines = [f"\n{date_str}"]
     lines.append(f"  {'Time':<8} {'Condition':<20} {'Temp':>6} {'Precip':>7}")
@@ -159,28 +202,36 @@ def format_hourly_day(date_str: str, periods: list[dict]) -> str:
         cond  = condition_str(p.get("condition", ""))
         temp  = p.get("temperature", "?")
         prob  = p.get("precipitation_probability", 0)
-        lines.append(f"  {time:<8} {cond:<20} {temp:>4}°F  {prob:>4}%")
+        lines.append(f"  {time:<8} {cond:<20} {temp:>4}{temperature_unit}  {prob:>4}%")
     return "\n".join(lines)
 
 
 async def run(args: argparse.Namespace) -> int:
     try:
-        current = await current_conditions()
+        weather_entity = await resolve_weather_entity()
+        current = await current_conditions(weather_entity)
 
         if args.json:
             ftype = "hourly" if (args.hourly or args.today or args.tomorrow) else "twice_daily"
-            forecasts = await get_forecast(ftype)
-            print(json.dumps({"current": current, "forecast_type": ftype, "forecast": forecasts}, indent=2))
+            forecasts = await get_forecast(ftype, weather_entity)
+            print(json.dumps({
+                "status": "ok",
+                "entity_id": weather_entity,
+                "current": current,
+                "forecast_type": ftype,
+                "forecast": forecasts,
+            }, indent=2))
             return 0
 
         # Header: current conditions
         cond = condition_str(current.get("condition", "unknown"))
         temp = current.get("temperature", "?")
+        temperature_unit = current.get("temperature_unit", "")
         hum  = current.get("humidity", "?")
-        print(f"Now: {cond}  {temp}°F  humidity {hum}%\n")
+        print(f"Now: {cond}  {temp}{temperature_unit}  humidity {hum}%\n")
 
         if args.today or args.tomorrow or args.hourly:
-            forecasts = await get_forecast("hourly")
+            forecasts = await get_forecast("hourly", weather_entity)
             by_day: dict[str, list[dict]] = defaultdict(list)
             for f in forecasts:
                 by_day[local_date(f["datetime"])].append(f)
@@ -191,23 +242,23 @@ async def run(args: argparse.Namespace) -> int:
             if args.today:
                 target = days[0] if days else None
                 if target:
-                    print(format_hourly_day(target, by_day[target]))
+                    print(format_hourly_day(target, by_day[target], temperature_unit))
             elif args.tomorrow:
                 target = days[1] if len(days) > 1 else None
                 if target:
-                    print(format_hourly_day(target, by_day[target]))
+                    print(format_hourly_day(target, by_day[target], temperature_unit))
             else:
                 for day in days:
-                    print(format_hourly_day(day, by_day[day]))
+                    print(format_hourly_day(day, by_day[day], temperature_unit))
         else:
-            forecasts = await get_forecast("twice_daily")
-            print(format_week(forecasts))
+            forecasts = await get_forecast("twice_daily", weather_entity)
+            print(format_week(forecasts, temperature_unit))
 
         return 0
 
     except Exception as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        return 1
+        print(json.dumps({"status": "infrastructure_error", "message": str(exc)}))
+        return 3
 
 
 def build_parser() -> argparse.ArgumentParser:

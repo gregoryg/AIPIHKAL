@@ -37,18 +37,24 @@ from typing import Any
 try:
     import websockets
 except ImportError:
-    print(json.dumps({"status": "infrastructure_error", "message": "websockets library not found"}))
-    sys.exit(3)
+    websockets = None
 
 HASS_SERVER = os.environ.get("HASS_SERVER", "")
 HASS_TOKEN = os.environ.get("HASS_TOKEN", "")
 HA_CONVERSATION_AGENT = "conversation.home_assistant"
+COMMAND_TIMEOUT = float(os.environ.get("HA_COMMAND_TIMEOUT", "30"))
 
 # HA response_type values that mean "matched and did something"
 DONE_TYPES = {"action_done", "query_answer"}
 
 # HA error codes that mean "I don't understand" (caller should fall back)
 NO_MATCH_CODES = {
+    "no_intent_match",
+    "no_valid_targets",
+    "intent_not_recognized",
+}
+
+WS_NO_MATCH_CODES = {
     "no_intent_match",
     "no_valid_targets",
     "intent_not_recognized",
@@ -61,10 +67,16 @@ def ws_url() -> str:
 
 async def process_intent(phrase: str) -> dict[str, Any]:
     """Send phrase through HA intent pipeline and return structured result."""
+    if websockets is None:
+        raise RuntimeError("websockets library not found; see references/setup.md")
     if not HASS_TOKEN:
         raise RuntimeError("HASS_TOKEN is not set")
 
-    async with websockets.connect(ws_url()) as ws:
+    async with websockets.connect(
+        ws_url(),
+        open_timeout=COMMAND_TIMEOUT,
+        close_timeout=COMMAND_TIMEOUT,
+    ) as ws:
         raw = await ws.recv()
         if json.loads(raw).get("type") != "auth_required":
             raise RuntimeError("Expected auth_required")
@@ -94,21 +106,24 @@ def interpret(phrase: str, msg: dict[str, Any]) -> tuple[dict[str, Any], int]:
     if not msg.get("success"):
         err = msg.get("error", {})
         code = err.get("code", "unknown")
-        # HA WebSocket-level errors (e.g. unknown_error from HA itself)
-        # Treat as no_match so callers fall back gracefully
+        status = "no_match" if code in WS_NO_MATCH_CODES else "error"
+        exit_code = 1 if status == "no_match" else 2
+        note = (
+            "Phrase was not recognized; a deterministic fallback may be used."
+            if status == "no_match"
+            else "Home Assistant rejected the request; do not perform a fallback action."
+        )
         return {
-            "status": "no_match",
+            "status": status,
             "phrase": phrase,
             "response_type": None,
             "speech": None,
             "success": [],
             "failed": [],
-            "note": (
-                f"HA returned a WebSocket-level error ({code}): {err.get('message', '')}. "
-                "Phrase likely not recognised by the intent engine — fall back to ha-on/ha-off/ha-trigger."
-            ),
+            "error_code": code,
+            "note": note,
             "raw": msg,
-        }, 1
+        }, exit_code
 
     resp = msg["result"]["response"]
     response_type = resp.get("response_type")
@@ -162,17 +177,17 @@ def interpret(phrase: str, msg: dict[str, Any]) -> tuple[dict[str, Any], int]:
             "raw": resp,
         }, 2
 
-    # Unknown response_type — surface it and treat as no_match
+    # An unknown response may represent partial processing. Never fall back.
     return {
-        "status": "no_match",
+        "status": "error",
         "phrase": phrase,
         "response_type": response_type,
         "speech": speech,
         "success": success_entities,
         "failed": failed_entities,
-        "note": f"Unrecognised response_type '{response_type}' — treating as no_match.",
+        "note": f"Unrecognised response_type '{response_type}'; do not perform a fallback action.",
         "raw": resp,
-    }, 1
+    }, 2
 
 
 async def main_async(phrase: str) -> int:
