@@ -1,135 +1,131 @@
 # LLM Council - Agents Guide
 
-Note to self: always run `date` at the start of a session.  It probably ain't 2024, Dorothy - output date and working directory so that it's in context
+## Session startup
 
-Start out by any new session by reading Agents.md, LLM-system-prompt.org, and the org mode Holy Trinity: README.org, PLANNING.org and TASKS.org
+At the start of each session:
 
-If they do not exist, consider creating them once we know what we're dealing with.
+1. Confirm the working directory, then run `date`. It probably ain't 2024, Dorothy.
+2. Read `Agents.md` and the Org-mode project files `README.org`,
+   `PLANNING.org`, and `TASKS.org` when they exist.
+3. Inspect relevant Git history and worktree state before changing files.
+4. Report keen observations that affect the work.
 
-Output keen observations about what you gleaned from reading so that the wisdom stays in context
+Do not create missing project files until the repository and task are understood.
+Some useful local files may be ignored by Git; read them with targeted commands
+when they are relevant.
 
-Keep in mind that some suggested files may be in `.gitignore` - in which case you can use cat or sed to read them.
+The repository history is documentation for past, present, and future work. Use it
+to understand why code exists, avoid restoring removed ideas, match established
+conventions, and preserve the human's Git discipline.
 
-**Benefits:**
-- Understand *why* code exists (archaeology)
-- Avoid re-implementing recently removed features
-- Match established commit message conventions
-- Honor the human's careful git discipline
+## Skills and capabilities
 
-The human has crafted this history as documentation for their Dream Team (Past/Present/Future Self). Read it. Learn from it. Don't be a tourist.
+Check `skills/` in the repository and `~/.skills/` when available. Read skill
+metadata first, then load the complete `SKILL.md` only when the skill is relevant.
+Skills may bundle scripts and references that replace fragile ad hoc workflows.
 
-## Skills & Capabilities
-Check for the existence of `skills/` in the current directory or `~/.skills/`. These directories contain Markdown definitions (`SKILL.md`) and scripts for advanced capabilities (e.g., "Rubber Duck Council", "Home Assistant CLI").
-- If found, read `SKILL.md` to understand available tools and protocols.
-- These skills often wrap complex CLI tools or orchestration logic.
+## Context and tooling discipline
 
-## Context discipline (read this before using tools)
-- Avoid recursive, broad-glob searches like `**/*`. This is the shell equivalent of `SELECT *` with no WHERE clause and can flood the context window, crash LLM sessions, or cause API 400s.
-- Prefer targeted patterns and shallow globs:
-  - Good: `src/test/recipes-page-categories.test.tsx`, `src/features/recipes/RecipesPage.tsx`
-  - Good: `src/*/TopNav.tsx`, `src/*/landing/*.tsx`
-  - Risky: `src/**/*.tsx` (only if you will immediately filter client-side—generally avoid)
-  - Reading multiple specific files at once is fine. The problem is unbounded discovery, not targeted reading.
-- Strategy:
-  1) List top-level dirs with `ls` or the list_directory tool.
-  2) Search with the most specific pattern possible.
-  3) Read exact files; only widen the pattern if necessary, stepwise.
-- When constructing shell commands or tool calls, include verbosity and sanity checks to surface output and avoid ambiguity.
+- Prefer `rg`, exact paths, and shallow patterns over broad recursive searches.
+- Never run unbounded searches such as `**/*` or `rg -uu ""`.
+- List top-level directories first, then widen discovery one step at a time.
+- Reading many known files is fine; uncontrolled discovery is not.
+- Include enough command verbosity and sanity checks to make failures visible.
+- Inspect tool output before deciding the next action.
+- Do not ask the human to run a command when available tools can answer safely.
 
-## Commit Message Generation (when user asks for commit breakdown)
-When the user requests commit message suggestions, provide **granular, purpose-driven commits** following Conventional Commit format with surgical file groupings:
+Think like SQL: avoid `SELECT *` without a useful `WHERE` clause.
 
-**Prompt pattern:** "I need commit message suggestions for [feature/area]"
+## Working approach
 
-**Response format:**
+- Treat planning and architecture as first-class work.
+- Build context before editing, but do not stop at a proposal when implementation
+  is requested and feasible.
+- Edit files freely, keep documentation current, and verify behavior with focused
+  tests.
+- Preserve unrelated user changes in a dirty worktree.
+- Prefer deterministic scripts and compact structured output where repeated model
+  reasoning would be slow or error-prone.
+
+## Commit message guidance
+
+Use Conventional Commit form:
+
+```text
+type(scope): concise imperative summary
+
+Explain what the commit changes and why the change belongs together. Prefer one
+or two short prose paragraphs. Mention important tradeoffs or compatibility
+effects when they are not obvious from the diff.
 ```
-## Commit N: [Purpose]
+
+Formatting rules:
+
+- Keep the subject under 72 characters.
+- Separate the subject and body with a blank line.
+- Wrap body text at approximately 80 characters.
+- Prefer factual repository-state language over session narrative.
+- Describe what the commit introduces, not the chronology of discovering it.
+- Use bullets only when several distinct details are clearer as a list.
+- Keep the tone practical and history-friendly; avoid jokes or editorial flourish
+  unless the human requests them.
+
+Choose the type that best describes the change: `feat`, `fix`, `refactor`, `test`,
+`docs`, `style`, or `build`. Use `dev(planning)` for planning-only changes when
+that convention fits the repository.
+
+### Commit breakdowns
+
+When asked to propose multiple commits:
+
+- Give each commit one coherent purpose and a surgical file grouping.
+- Group files by behavior, not alphabetically.
+- Separate tests when the human requests a distinct test commit; otherwise keep
+  tests with the behavior they verify when that makes the history clearer.
+- Prefer independent commits that can be reviewed and reverted safely.
+- Mark a file with `*` when its hunks belong to multiple proposed commits.
+- For shared files, briefly identify which hunks belong to each commit.
+
+Suggested presentation:
+
+```text
+## Commit N: Purpose
+
+type(scope): concise imperative summary
+
+Prose explaining what changes and why.
+
+Files: path/one, path/two*
 ```
-type(scope): concise description
 
-A readable paragraph (or two) explaining the purpose, intent, and high-level "why" of this change. This serves as the TL;DR for the context.
+## Coding style and naming
 
-- Optional bullet point for specific implementation detail
-- Optional bullet point for architectural decision or side effects
+- Use Python 3.12, four-space indentation, PEP 8, and type hints.
+- Use `lowercase_with_underscores` for Python modules and `test_*.py` for tests.
+- Keep functions cohesive and add short Google-style docstrings where useful.
+- Use `black` locally when available; it is not currently enforced by CI.
 
-Files: file1.ts, file2.tsx*, file3.ts
-       (* = appears in multiple commits, hunk staging recommended)
-```
+## Emacs programming
 
-**Categories by priority:**
-1. `feat(scope)` - New functionality, components, APIs
-2. `fix(scope)` - Bug fixes, corrections
-3. `refactor(scope)` - Code reorganization without feature change
-4. `test(scope)` - Test additions, test improvements
-5. `dev(planning)` - TASK.org, PLANNING.org updates
-6. `docs(scope)` - README.org, documentation
-7. `style(scope)` - Formatting, CSS, visual changes
-8. `build(deps)` - Package updates, build config
+- Ask for required load-path extensions early, such as external package checkout
+  paths needed by batch tests.
+- Use `emacs -Q --batch -L <deps> -L . --eval '(require ...)'` for smoke tests.
+- Set `load-prefer-newer` or remove stale `.elc` files when necessary.
+- Prefer batch probes over interactive testing and capture relevant messages.
+- Keep tests terminal-friendly; TTY behavior can matter.
+- Use `libxml-parse-html-region` and `dom.el` for HTML/XML, not regular
+  expressions.
+- Capture buffer-local values before entering `with-current-buffer` or
+  `with-temp-buffer`.
+- Before writing a sidecar file, check `find-buffer-visiting`; preserve unsaved
+  buffer changes instead of overwriting them on disk.
 
-**Granularity principles:**
-- Each commit tells one coherent story
-- Group files by logical purpose, not alphabetically
-- Separate API/logic/UI/tests into different commits
-- Enable surgical rollbacks and `git blame` clarity
-- **Style:** Paragraph(s) for intent/context first, then optional bullets for details
-- **Mark files with asterisk (*) when they appear in multiple commits**
-- Asterisk alerts human to activate magit hunk-staging for surgical commits
+## Pull requests
 
-**Example file groupings:**
-- API client methods together: `src/lib/api/*.ts`
-- UI components by feature: `src/features/admin/*.tsx`
-- Tests with their subjects: `src/test/similarity.test.ts`
-- Config/routing changes: `src/App.tsx, vite.config.ts`
-
-**Magit hunk-staging markers:**
-When a file appears in multiple commits, mark it with `*` in each occurrence:
-```
-## Commit 1: Foundation
-Files: src/lib/session.tsx*, src/lib/types.ts
-
-## Commit 2: Actions
-Files: src/lib/session.tsx*, src/lib/api/auth.ts
-```
-This signals the human that `session.tsx` needs hunk-level staging because it contains changes for multiple semantic commits.
-
-**Hunk-staging guide (for shared files):**
-When files are marked with `*`, add a **Note:** section at the end explaining the logical boundaries within each shared file. This helps the human know which hunks belong to which commit:
-```
-**Note:** `session.tsx*` appears in commits 1-2. Logical boundaries:
-- Commit 1: The `SessionProvider` component and `useSession` hook
-- Commit 2: The `logout()` and `refreshToken()` functions
-```
-This eliminates guesswork during hunk-staging and speeds up the surgical commit process.
-
-This approach supports magit hunk-staging workflow and produces meaningful git history for debugging and code archaeology.
-
-## Tooling hygiene (must-follow)
-- Never run a broad recursive search like `**/*` or `rg -uu ""`.
-- Think like SQL: avoid `SELECT *` without a WHERE.
-- Prefer exact filenames or shallow globs and iterate.
-- Reading many specific files is OK; flooding discovery is not.
-- When in doubt, ask the human to run a targeted command and paste results.
-
-## Coding Style & Naming Conventions
-- Python 3.12, 4-space indentation, PEP 8, type hints.
-- Module/file names: lowercase_with_underscores; tests as `test_*.py`.
-- Keep functions cohesive and documented; include short Google-style docstrings.
-- Formatting: use `black` locally if available (not enforced in CI).
-
-## Emacs programming (local best practices)
-- Ask for load-path extensions early (e.g., `~/.emacs.d/straight/repos/esxml/` for nov.el deps).
-- Run `emacs -Q --batch -L <deps> -L . --eval '(require ...)'` for linty smoke tests; set `load-prefer-newer t` or delete stale `.elc` to load fresh code.
-- Prefer batch probes over interactive runs; capture messages with `message-log-max` and `*Messages*` reads.
-- Keep tests minimal and terminal-friendly; TTY behavior matters (e.g., cursor-sensor echoes).
-- Avoid broad filesystem pokes inside Emacs; rely on shell tools (`rg`, `sed`) for discovery.
-- **HTML/XML Parsing:** Avoid regex for HTML tags. Use `libxml-parse-html-region` and `dom.el`. Regex is too fragile for namespaces (`<html:title>`) and attributes.
-- **Context Safety:** Capture buffer-local variables  *before* entering `with-current-buffer` or `with-temp-buffer`. They are lost in the new context.
-- **File I/O & Buffers:** When writing auxiliary/sidecar files, always check `find-buffer-visiting`. If the user has the file open with unsaved changes, modifying the buffer (and saving it) is safer than blindly overwriting the file.
-
-## Commit & Pull Request Guidelines
-- Commits: imperative mood, concise summary (<72 chars), body for rationale. Example: `Add pattern matching and tests`.
-- PRs: clear description, linked issues, reproducible steps; include curl screenshots/snippets for API changes; call out env vars or migrations.
-
+Write a clear description, link relevant issues, and include reproducible
+verification steps. Call out environment variables, migrations, compatibility
+effects, or operational follow-up. Include request/response examples for API
+changes when they materially help review.
 
 # THE IRON RULE OF GIT: READ-ONLY
 
@@ -147,9 +143,8 @@ This approach supports magit hunk-staging workflow and produces meaningful git h
 
 **Mnemonic**: "I am the Editor. You are the Librarian."
 
-# How we work as a team 'round these parts
+## Team agreement
 
-Human gives free reign to the LLM to make any and all code edits, keep docs up to date etc.  No need to present proposed code changes in the chat context, or diffs or patches.  Just do it ... as they say.  We are kept safe by human's diligent git hygeine.  After implementing a feature or two, human will test and confirm.  **Human does all git commits.**
-
-ONE VERY IMPORTANT NOTE:
-Please treat planning and architecture as high priority, so that human is not tempted to switch back to a certain rather arrogant LLM that thinks it's so very superior in coding tasks!
+The human gives the agent broad freedom to edit code and documentation without
+presenting patches in chat first. The human reviews the worktree, tests as needed,
+and owns all staging and commits through Magit.
