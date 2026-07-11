@@ -1,250 +1,160 @@
 ---
 name: spotify-cli
-description: "Use the standalone spotify-cli command-line tool to authenticate with Spotify, inspect playback, control devices and playback, search the catalog, manage playlists, inspect albums and artists, navigate podcast shows and episodes, manage followed artists, and save or remove library items. Trigger this skill when a local machine has spotify-cli installed or when the user points you at a repo or virtualenv containing it. The skill includes guidance for locating the binary, handling headless auth, curating vibe-based playlists, navigating podcasts, and declining clearly if spotify-cli is not available."
+description: Use the standalone spotify-cli JSON CLI for Spotify authentication, search, playback, devices, queue, playlists, saved library items, followed artists, podcast shows and episodes, and music discovery or curation. Trigger when spotify-cli is installed or the user identifies its checkout or virtualenv.
 ---
 
-# spotify-cli
+# Spotify CLI
 
-Use the standalone `spotify-cli` tool as a JSON-first control surface for Spotify.
+Use `spotify-cli` as the account-level Spotify control surface. Prefer compact JSON
+and the fewest commands that safely answer or perform the request.
 
-## Find the binary first
+## Locate the tool
 
-Check for `spotify-cli` before planning any command sequence.
+Check before planning a command sequence:
 
-Preferred lookup order:
 1. `command -v spotify-cli`
-2. If the user pointed to a project checkout, check likely local venv paths such as:
-   - `./.venv/bin/spotify-cli`
-   - `./venv/bin/spotify-cli`
-3. If a Python environment is already active and `spotify_cli` is importable, `python -m spotify_cli` is an acceptable fallback.
+2. a user-provided checkout's `.venv/bin/spotify-cli` or `venv/bin/spotify-cli`
+3. `python -m spotify_cli` when that module is already available
 
-If the tool is not found, do not bluff and do not invent Spotify results from thin air.
+If none exists, state exactly what was checked. Do not invent playback, search, or
+library results. Only discuss installation when the user asks for setup help.
 
-Respond plainly with what you checked and what the user can do next. Example shape:
+## Default invocation
 
-- `spotify-cli` is not on `PATH`
-- no obvious repo-local venv binary was found
-- if you have this tool in a checkout, point me at that directory or activate the environment first
-
-If the user wants setup help, suggest the usual developer path:
+Use compact JSON for agent work:
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -e .[dev]
+spotify-cli --compact COMMAND
 ```
 
-## Prefer compact JSON
+Inspect `spotify-cli COMMAND --help` rather than guessing an option when a workflow
+is not covered below.
 
-For tool-driven usage, prefer:
+## Choose the shortest path
+
+| User intent | Command |
+|---|---|
+| What is playing? | `playback current` |
+| Pause, resume, skip, change volume | `playback pause/play/next/previous/volume` |
+| Find and immediately play a likely result | `search-and-play` |
+| Inspect candidates without playing | `search` or `search-and-play --dry-run` |
+| Select a Spotify Connect device | `devices list`, then `devices transfer` |
+| Inspect or add to the queue | `queue get` or `queue add` |
+| Manage playlists | `playlists ...` |
+| Manage saved tracks, albums, shows, or episodes | `library ...` |
+| Manage followed artists | `artists list-followed/follow/unfollow` |
+| Inspect a podcast | `search --type show`, then `shows episodes` |
+
+## Authentication
+
+Start diagnosis with:
 
 ```bash
-spotify-cli --compact ...
-```
-
-The CLI is JSON-first already; `--compact` just makes it less chatty on the wire.
-
-## Auth workflow
-
-Preferred durable setup: use the local config file:
-- `${XDG_CONFIG_HOME:-~/.config}/spotify-cli/spotify-cli.conf`
-
-Example:
-
-```ini
-[spotify]
-client_id = your-client-id
-redirect_uri = http://127.0.0.1:43827/spotify/callback
-cache_path = ~/.cache/spotify-cli/token.json
-```
-
-Useful setup/inspection commands:
-
-```bash
-spotify-cli config init --client-id "your-client-id"
-spotify-cli config show
 spotify-cli doctor
-```
-
-Environment variables still override config-file values when needed:
-- `SPOTIFY_CLIENT_ID`
-- `SPOTIFY_REDIRECT_URI`
-- `SPOTIFY_CACHE_PATH`
-- `SPOTIFY_CONFIG_FILE`
-
-Compatibility aliases may also work:
-- `SPOTIPY_CLIENT_ID`
-- `SPOTIPY_REDIRECT_URI`
-
-Canonical auth commands:
-
-```bash
 spotify-cli auth status
-spotify-cli auth login
-spotify-cli auth logout
 ```
 
-If the local checkout recently gained new scopes and existing mutations now fail with a 403, refresh the token grant explicitly:
+Normal login is `spotify-cli auth login`. If an older cached token lacks scopes
+introduced by a CLI upgrade, use:
 
 ```bash
 spotify-cli auth login --force
 ```
 
-For headless or remote usage, read `references/headless-auth.md`.
+The durable config is normally
+`${XDG_CONFIG_HOME:-~/.config}/spotify-cli/spotify-cli.conf`. Useful helpers are:
 
-If a cached token exists but auth still looks broken, suspect missing client-id configuration before assuming the token itself is dead. With a valid configured client id, stale-token refresh should usually happen automatically through Spotipy.
+```bash
+spotify-cli config init --client-id "your-client-id"
+spotify-cli config show
+```
 
-## Command families
+Read `references/headless-auth.md` only for remote/headless login.
 
-- `auth` — login, logout, status
-- `devices` — list and transfer playback
-- `playback` — state, current, play, pause, next, previous, seek, repeat, shuffle, volume, recently-played
-- `queue` — get and add
-- `search` — catalog search
-- `search-and-play` — convenience command for finding a likely track, artist, album, or playlist match and starting playback immediately
-- `playlists` — list, get, create, add-items, remove-items, update
-- `albums` — get, tracks
-- `artists` — get, list-followed, follow, unfollow
-- `shows` — get, episodes
-- `episodes` — get
-- `library tracks` — list, save, remove
-- `library albums` — list, save, remove
-- `library shows` — list, save, remove
-- `library episodes` — list, save, remove
+## Playback and search
 
-## Canonical patterns
-
-### What is playing?
-
-Use one call:
+Direct transport actions need no read-before-write preflight:
 
 ```bash
 spotify-cli --compact playback current
-```
-
-Do not chain `playback state` unless you also need device/shuffle/repeat details.
-
-### Pause, resume, skip, volume
-
-Use direct actions; no preflight needed.
-
-```bash
 spotify-cli --compact playback pause
 spotify-cli --compact playback play
 spotify-cli --compact playback next
-spotify-cli --compact playback previous
 spotify-cli --compact playback volume 50
 ```
 
-For direct episode playback:
-
-```bash
-spotify-cli --compact playback play --uri spotify:episode:...
-```
-
-### Play a specific track
-
-Prefer the convenience command when it is sufficient:
+Prefer `search-and-play` for a straightforward request:
 
 ```bash
 spotify-cli --compact search-and-play "take five"
-```
-
-For inspection without mutation:
-
-```bash
-spotify-cli --compact search-and-play "take five" --dry-run
-```
-
-If you need manual control over the selected result, use the explicit two-step flow:
-
-```bash
-spotify-cli --compact search "kind of blue" --type track --limit 5
-spotify-cli --compact playback play --uri spotify:track:...
-```
-
-### Play a specific artist, album, or playlist result
-
-`search-and-play` accepts one explicit type for non-track playback targets:
-
-```bash
 spotify-cli --compact search-and-play --type artist "Lyle Lovett"
 spotify-cli --compact search-and-play --type album "The Road to Ensenada"
 spotify-cli --compact search-and-play --type playlist "Bossa Nova"
 ```
 
-Allowed `search-and-play --type` values are:
-- `track` (default)
-- `artist`
-- `album`
-- `playlist`
-
-### Play an album, playlist, or artist context
-
-Search for the context type, then pass its URI with `--context-uri`.
+Use `--dry-run` or explicit search when title ambiguity matters:
 
 ```bash
-spotify-cli --compact search "miles davis kind of blue" --type album --limit 1
+spotify-cli --compact search-and-play "take five" --dry-run
+spotify-cli --compact search "kind of blue" --type track --limit 5
+spotify-cli --compact playback play --uri spotify:track:...
+```
+
+For an album, playlist, or artist context:
+
+```bash
 spotify-cli --compact playback play --context-uri spotify:album:...
 ```
 
-For artist-context playback, Spotify handles the downstream sequencing.
+For an episode or one or more tracks, repeat `--uri` as needed:
 
-### Transfer playback
+```bash
+spotify-cli --compact playback play --uri spotify:episode:...
+```
+
+## Devices and queue
 
 ```bash
 spotify-cli --compact devices list
-spotify-cli --compact devices transfer <device-id> --play
-```
-
-### Add an item to the queue
-
-```bash
+spotify-cli --compact devices transfer DEVICE_ID --play
+spotify-cli --compact queue get
 spotify-cli --compact queue add spotify:track:...
 ```
 
-### Add a track to a playlist
+Playback mutations generally require Premium and an active Spotify Connect device.
+If no device is active, ask the user to open Spotify somewhere or transfer to a
+device returned by `devices list`.
 
-Typical flow:
-1. search for the track URI or use the currently playing track
-2. locate the playlist id
-3. add the item
+## Playlists and library
+
+Resolve exact item and playlist identifiers before mutation:
 
 ```bash
 spotify-cli --compact playlists list --limit 50
-spotify-cli --compact playlists add-items <playlist-id> spotify:track:...
+spotify-cli --compact playlists add-items PLAYLIST_ID spotify:track:...
+spotify-cli --compact playlists remove-items PLAYLIST_ID spotify:track:...
 ```
 
-### Save or unsave library items
+Saved items use the `library` family:
 
 ```bash
-spotify-cli --compact library tracks save <track-id-or-uri>
-spotify-cli --compact library tracks remove <track-id-or-uri>
-spotify-cli --compact library albums save <album-id-or-uri>
-spotify-cli --compact library albums remove <album-id-or-uri>
-spotify-cli --compact library shows save <show-id-or-uri>
-spotify-cli --compact library shows remove <show-id-or-uri>
-spotify-cli --compact library episodes save <episode-id-or-uri>
-spotify-cli --compact library episodes remove <episode-id-or-uri>
+spotify-cli --compact library tracks save spotify:track:...
+spotify-cli --compact library albums remove spotify:album:...
+spotify-cli --compact library shows save spotify:show:...
+spotify-cli --compact library episodes save spotify:episode:...
 ```
 
-Artists are not library saves in Spotify's model; they are a separate follow surface.
+Artist following is separate from saved-library items:
 
 ```bash
 spotify-cli --compact artists list-followed --limit 10
-spotify-cli --compact artists follow <artist-id-or-uri>
-spotify-cli --compact artists unfollow <artist-id-or-uri>
+spotify-cli --compact artists follow spotify:artist:...
+spotify-cli --compact artists unfollow spotify:artist:...
 ```
 
-### Find recent podcast episodes
+## Podcasts
 
-Podcasts are navigated as `show -> episodes`, not as tracks.
-
-Typical flow:
-1. search for the podcast as a show
-2. inspect the top show hit
-3. fetch that show's episodes
-4. treat the first returned episode as the most recent visible result unless you have reason to think otherwise
+Spotify models podcasts as shows containing episodes:
 
 ```bash
 spotify-cli --compact search "No Hay Tos" --type show --limit 5
@@ -253,55 +163,31 @@ spotify-cli --compact shows episodes spotify:show:... --limit 10
 spotify-cli --compact episodes get spotify:episode:...
 ```
 
-If the user asks for "the latest episode" of a podcast, this is the path to use.
+Use the first returned episode as the latest visible result only after confirming
+the response order. Account visibility can include private or linked feeds.
 
-## Discovery and vibe-based curation
+The CLI can expose Spotify state, but it is not a durable listening journal or
+want-to-listen tracker. Do not invent local tracking files or schemas as part of
+this skill; that belongs to a separate user-owned application.
 
-When the user wants a mood, lane, or side-door discovery path rather than exact title matching, do not just parrot the first search hit.
+## Discovery and curation
 
-Read `references/curation-patterns.md` for the fuller pattern. Short version:
-- infer the lane from the user's wording and examples
-- prefer a coherent sequence over a heap of plausible tracks
-- build a playlist seed that Spotify can then extend with its own shuffle or Smart Shuffle behavior
+For mood-based discovery or playlist construction, read
+`references/curation-patterns.md`. Search results are candidates, not verdicts:
+form a thesis, choose anchors, widen carefully, sequence coherently, then iterate.
 
-For iterative playlist building, use a curation-first loop:
-1. infer the thesis
-2. choose a few strong anchor tracks or artists
-3. run targeted searches against the Spotify catalog
-4. widen carefully from the good hits
-5. build a coherent seed playlist
-6. iterate by pruning and adding, rather than assuming the first pass is done
+## Failure handling
 
-This is especially relevant now that Spotify's old recommendations endpoints are gone. The workflow still works; it just depends on search, inspection, and taste rather than a recommendation API that no longer exists.
+Read `references/failure-modes.md` when a command fails. Key rules:
 
-## Failure modes and caveats
+- Empty `playback current` output can validly mean nothing is playing.
+- Do not retry mutations blindly after an ambiguous network/API failure; inspect
+  state first to avoid duplicate playlist or queue changes.
+- Smart Shuffle cannot reliably be restored through the current Web API after a
+  shuffle mutation.
+- Reauthorize with `auth login --force` after adding scopes to an existing setup.
+- Spotify's removed recommendations endpoints are not a usable fallback for
+  discovery.
 
-Before digging too far, prefer:
-
-```bash
-spotify-cli doctor
-spotify-cli auth status
-```
-
-They should tell you whether the config file was found, whether the client id came from config or env, whether the cache exists, and whether the token is currently usable.
-
-
-Read `references/failure-modes.md` when commands fail or when playback behavior seems inconsistent.
-
-Important short list:
-- no active device: playback mutation will fail until Spotify is active somewhere
-- Premium is usually required for playback mutation
-- `playback current` returning 204-style empty output just means nothing is playing
-- shuffle mutation is lossy when Smart Shuffle is active; plain shuffle can be restored, Smart Shuffle generally cannot through the current Web API surface
-- artist follow/unfollow uses separate follow scopes; after upgrading from an older token cache, re-run `spotify-cli auth login --force` if those commands 403
-- show/episode visibility may reflect the authenticated user's account view, including linked premium/supporter feeds such as Patreon-connected podcast variants
-- Spotify's old recommendations endpoints have been removed from the Web API; Spotipy still exposes deprecated wrappers, but live calls now return 404
-
-## URI, URL, and ID inputs
-
-The CLI accepts Spotify items in three common forms:
-- URI: `spotify:track:...`, `spotify:artist:...`, `spotify:album:...`, `spotify:show:...`, `spotify:episode:...`
-- URL: `https://open.spotify.com/track/...`, `https://open.spotify.com/artist/...`, `https://open.spotify.com/album/...`, `https://open.spotify.com/show/...`, `https://open.spotify.com/episode/...`
-- bare ID: `...`
-
-Use full URIs when possible. Search results already return them.
+Prefer Spotify URIs from command output. The CLI also accepts supported Spotify
+URLs and bare IDs, but URIs preserve the item type explicitly.
