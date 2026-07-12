@@ -312,6 +312,33 @@ Notes:
 
 Recalculate with `C-c C-c` on the `#+TBLFM` line.
 
+## Verify Org artifacts before delivery
+
+For generated or substantially edited `.org` files, validate in layers:
+
+1. Parse the file with vanilla Org:
+
+   ```bash
+   emacs -Q --batch --eval \
+     '(progn (require '\''org)
+             (with-temp-buffer
+               (insert-file-contents "FILE.org")
+               (org-mode)
+               (org-element-parse-buffer)))'
+   ```
+
+2. Assert task-specific semantics such as heading levels, TODO keywords, tags,
+   property identity uniqueness, and preservation of unmanaged text.
+3. If a tool updates the file, run it twice and require the second run to be a
+   no-op unless repeated changes are intentional.
+4. Test Agenda commands in the user's normal Emacs when custom TODO keywords,
+   inheritance, `org-agenda-files`, or display settings affect the result.
+
+Successful parsing proves structural readability, not correct Agenda behavior.
+When exact Org behavior is uncertain, prefer the installed Info manual over
+memory; on this system it may be available at
+`/usr/local/share/info/org.info.gz`.
+
 ## Archiving to reduce clutter (explicit agreement)
 
 When a subtree/phase is DONE and no longer needed in the active tracking context:
