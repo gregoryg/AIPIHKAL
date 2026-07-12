@@ -116,6 +116,25 @@ When writing auxiliary/sidecar files, **always check `find-buffer-visiting` firs
 - For gptel tools specifically: byte-compile the file, then `require` it in batch to confirm clean loading.
 - Use `ert` for structured test suites when the project warrants it.
 
+### Generated Org artifacts
+
+When Emacs Lisp creates or substantially rewrites Org files, parse a produced
+artifact with vanilla Org as a separate smoke test:
+
+```bash
+emacs -Q --batch --eval \
+  '(progn (require '\''org)
+          (with-temp-buffer
+            (insert-file-contents "OUTPUT.org")
+            (org-mode)
+            (org-element-parse-buffer)))'
+```
+
+This proves that Org can read the structure; it does not prove Agenda semantics
+or preservation behavior.  Also assert important headings, properties, and tags,
+rerun the generator to check idempotence, and test configuration-dependent Agenda
+views in the user's normal Emacs when relevant.
+
 ## Discovery & Exploration
 
 - Avoid broad filesystem pokes inside Emacs batch; rely on shell tools (`rg`, `grep`, `find`, `sed`) for discovery and then use targeted Elisp for processing.
