@@ -1,6 +1,6 @@
 ---
 name: org-mode-syntax
-description: Write correct, idiomatic Org mode (vanilla) including denote-style optional frontmatter, agenda-aware tasks (TODO/STARTED/PAUSED/DONE, SCHEDULED/DEADLINE, repeaters, tags), and interactive executable Org Babel blocks (emacs-lisp, python, bash, sql) that produce in-buffer results. Use when asked to draft or transform .org files, planning/task documents, executable notes, or when Org syntax/agenda/Babel interactivity is needed instead of Markdown.
+description: Write, transform, and validate correct, idiomatic Org mode while preserving repository TODO workflows and existing document structure. Use for .org files, planning and task documents, Agenda-aware content, literal Org examples, or executable Babel blocks instead of Markdown.
 license: Complete terms in LICENSE.txt
 ---
 
@@ -18,8 +18,12 @@ Operate as an Org author, not a Markdown author. Prefer Org-native constructs.
 
 - When the user asks for plans, tasks, project tracking, or anything time-based:
   - Use Org headlines with TODO keywords and agenda timestamps (`SCHEDULED`, `DEADLINE`).
-  - Default TODO workflow (portable subset): `TODO`, `STARTED`, `PAUSED`, `DONE`.
-  - Add tags where useful for filtering (e.g. `:work:`, `:home:`, `:deep:`).
+  - Inspect project guidance, file-local `#+TODO` keywords, and existing headlines
+    before choosing states. Preserve the repository's workflow and state order.
+  - Only when no workflow exists, use the portable subset `TODO`, `STARTED`,
+    `PAUSED`, and `DONE`, adapting it when the user supplies a preference.
+  - Add tags where useful for filtering (e.g. `:work:`, `:home:`, `:deep:`),
+    without changing established file-tag or inheritance semantics.
 
 - When computation, transformation, querying, or “let’s check” would help:
   - Prefer executable Org Babel blocks that can be run in situ (vanilla: `C-c C-c` in the block).
@@ -29,9 +33,26 @@ Operate as an Org author, not a Markdown author. Prefer Org-native constructs.
   - Propose archiving the subtree via `org-archive-subtree` to reduce clutter.
   - Do not assume the archive filename/location.
 
+## Preserve structure when editing
+
+Treat existing Org structure as data. Unless the task explicitly changes it:
+
+- preserve headline depth and subtree boundaries;
+- keep planning lines immediately below their headline and the property drawer
+  immediately after any planning line;
+- preserve drawers, clocks, links, affiliated keywords such as `#+name`,
+  `#+caption`, and `#+results`, and all unmanaged user text;
+- preserve TODO keyword, tag, and property identity and inheritance; and
+- avoid moving content across subtree boundaries when that changes inherited
+  tags, properties, or Agenda behavior.
+
+When generating or transforming a managed subtree, record enough before-and-after
+structure to detect accidental loss. Useful invariants include heading, TODO,
+tag, property, link, drawer, clock, and block identities or counts.
+
 ## Minimal syntax patterns (authoring)
-### Properties Property Syntax
-===================
+
+### Properties
 
 Properties are key-value pairs.  When they are associated with a single
 entry or with a tree they need to be inserted into a special drawer (see
@@ -177,6 +198,28 @@ can be inherited by all entries in all Org files.
 - [X] done checkbox
   - nested item
 ```
+
+### Literal Org examples
+
+Use `#+begin_example` and `#+end_example` for literal material that must not
+execute. Use a source block only when language semantics or execution matter.
+
+When an Org document embeds Org syntax, prefix potentially structural lines with
+a comma so they cannot become real headings, keywords, or block delimiters in the
+surrounding document. This is especially important for headings and nested blocks:
+
+```org
+#+begin_example
+,* Literal heading
+,#+begin_src emacs-lisp
+(message "This is shown, not executed")
+,#+end_src
+#+end_example
+```
+
+Use the same escape for a literal line that would otherwise close its surrounding
+block. Reparse and lint after editing nested examples; visual inspection alone is
+not sufficient.
 
 ## Agenda-aware tasks (the “why” + the “how”)
 
@@ -327,14 +370,38 @@ For generated or substantially edited `.org` files, validate in layers:
                (org-element-parse-buffer)))'
    ```
 
-2. Assert task-specific semantics such as heading levels, TODO keywords, tags,
-   property identity uniqueness, and preservation of unmanaged text.
-3. If a tool updates the file, run it twice and require the second run to be a
+2. Run `org-lint`. In batch mode, `org-lint` returns its reports, so make any
+   report fail validation:
+
+   ```bash
+   emacs -Q --batch --eval '
+   (progn
+     (require (quote org))
+     (require (quote org-lint))
+     (with-temp-buffer
+       (insert-file-contents "FILE.org")
+       (org-mode)
+       (let ((reports (org-lint)))
+         (dolist (report reports)
+           (let ((fields (cadr report)))
+             (princ (format "line %s [%s] %s\n"
+                            (aref fields 0)
+                            (aref fields 1)
+                            (aref fields 2)))))
+         (when reports (kill-emacs 1)))))'
+   ```
+
+3. Assert task-specific semantics such as headline hierarchy, TODO keywords and
+   sequences, tags, property identity uniqueness, links, block boundaries, and
+   preservation of drawers, clocks, affiliated keywords, and unmanaged text.
+4. If a tool updates the file, run it twice and require the second run to be a
    no-op unless repeated changes are intentional.
-4. Test Agenda commands in the user's normal Emacs when custom TODO keywords,
+5. Test Agenda commands in the user's normal Emacs when custom TODO keywords,
    inheritance, `org-agenda-files`, or display settings affect the result.
 
-Successful parsing proves structural readability, not correct Agenda behavior.
+Successful parsing proves structural readability, not lint cleanliness or correct
+Agenda behavior. `org-lint` catches suspicious constructs, including malformed or
+incomplete blocks, which an element parse may tolerate.
 When exact Org behavior is uncertain, prefer the installed Info manual over
 memory; on this system it may be available at
 `/usr/local/share/info/org.info.gz`.
