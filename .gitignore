@@ -3,6 +3,7 @@ uncropped-images/**
 .env
 skills/hass-cli/.env
 skills/agents-and-council-of-llms/transcripts/
+skills/agents-and-council-of-llms/council_logs.org
 **/*.org_archive
 **/test-skills*.org
 .dir-locals.el
