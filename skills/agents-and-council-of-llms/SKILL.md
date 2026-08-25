@@ -1,239 +1,149 @@
 ---
 name: agents-and-council-of-llms
-description: invoke multiple LLMs to gather different perspectives, review each other's outputs, and act as a council under the directorship of you the Council Head. Or more generally, call other LLM instances as agents to provide summaries without cluttering context.
+description: Convene multiple independent LLM perspectives, optionally anonymize and peer-review them, then adjudicate a single evidence-checked verdict. Use for consequential architecture decisions, red-team review, subjective tradeoffs, consistency checks, or role-based analysis where model/lens diversity adds value; use bounded-llm-delegation instead for a single child task.
 ---
 
-You are the **Council Chairman**, an elite orchestration manager responsible for conducting high-quality deliberation among multiple AI models. Your goal is to produce the **single best possible answer** by synthesizing the diverse strengths of your "Council" and verifying their claims with your own tools.
+# Council of LLMs
 
-**Role:** Council Chairman
-**Description:** Orchestrate a "Council of LLMs" to provide multi-perspective analysis on complex problems. Supports both **Role-Based** (different lenses) and **Consensus-Based** (same prompt, multiple models) workflows.
+Act as Council Chair, not a vote counter. Solicit bounded independent views,
+verify disputed claims, and synthesize the best answer.
 
-## Capabilities
-1.  **Triage**: Decide protocol level (1=Direct, 2=Council).
-2.  **Solicitation**: Gather independent expert opinions via `council-convene.sh`.
-3.  **Peer Review** (Optional): Have models critique each other's anonymous responses via `council-review.sh`.
-4.  **Synthesis**: Produce a final verdict from the transcripts.
-5.  **Logging**: Record sessions in `council_logs.org`.
+Read `../bounded-llm-delegation/SKILL.md` before launching members. Its session,
+deadline, process, artifact, least-privilege, and failure rules govern every
+council call.
 
-## Tools
+## Triage
 
-### `council-convene.sh`
-Orchestrates parallel `opencode` calls. Supports Role-Based (Lenses), Consensus-Based (Voting), and multiple input modes.
+Use a council only when independent perspectives can change the result:
 
-**Usage:**
-```bash
-# 1. Role-Based (Standard Council)
-./skills/agents-and-council-of-llms/council-convene.sh \
-  --problem "..." \
-  --lenses "Lens1, Lens2, Lens3"
+- role-based analysis of a complex design;
+- consequential red-team or migration review;
+- genuine ambiguity or subjective tradeoffs;
+- consistency/hallucination checks across repeated calls;
+- explicit user request for multiple models.
 
-# 2. Consensus-Based (Democratic Voting)
-# Spawns N identical members to check for consistency/hallucination
-./skills/agents-and-council-of-llms/council-convene.sh \
-  --problem "..." \
-  --count 5
+Use one bounded delegate for isolated reconnaissance or summarization. Answer
+directly for simple facts and unambiguous work.
 
-# 3. Complex prompts via file (avoids shell escaping issues)
-./skills/agents-and-council-of-llms/council-convene.sh \
-  --prompt-file /tmp/my_prompt.txt \
-  --lenses "Technical, Business, Legal"
+## Protocol
 
-# 4. Complex prompts via base64 (single safe argument)
-prompt_b64=$(echo "My complex prompt..." | base64 -w0)
-./skills/agents-and-council-of-llms/council-convene.sh \
-  --prompt-b64 "$prompt_b64" \
-  --count 3
+1. **Research first when needed.** Build a compact fact brief from primary
+   sources. Do not ask every member to rediscover the same repository.
+2. **Choose council shape.** Use distinct lenses for complementary expertise or
+   repeated identical prompts for consistency. Repeated calls to one model are
+   not model diversity.
+3. **Write one complete prompt file.** Include the user's request verbatim,
+   verified facts, scope, mutation/tool limits, expected output, and stopping
+   condition.
+4. **Select current models.** Prefer Pi as the common harness and choose diverse
+   provider/model IDs available through Pi. Verify stale identifiers before a
+   large fan-out.
+5. **Set bounded execution.** Choose per-member deadline, forced-kill grace, and
+   concurrency. Make the parent shell-tool deadline longer than member deadline
+   plus aggregation grace.
+6. **Convene.** Preserve each prompt, child session, stdout/stderr, final output,
+   status, and compiled transcript.
+7. **Inspect failures.** Distinguish timeout, auth, stale model, quota, and model
+   errors. Preserve successful seats; do not silently replace a failed model.
+8. **Review only when useful.** Skip peer review when outputs substantially
+   agree. Otherwise anonymize responses and request targeted critique/ranking.
+9. **Adjudicate.** Verify consequential factual disputes with primary sources or
+   local tools. Explain where the Chair rejects council claims.
+10. **Log durable sessions.** Read `council_logs.org` when it exists (create it
+    when needed), prepend a compact entry, and link the transcript/review
+    artifacts. Do not paste full model output into the log.
 
-# 5. Override models for this session
-./skills/agents-and-council-of-llms/council-convene.sh \
-  --problem "..." \
-  --models "openrouter/openai/gpt-4o,openrouter/anthropic/claude-3.5-sonnet"
+## Convene
 
-# 6. Dry run (validate without burning tokens)
-./skills/agents-and-council-of-llms/council-convene.sh \
-  --problem "..." \
-  --lenses "A, B, C" \
-  --dry-run
-```
-
-**Options:**
-| Option | Description |
-|--------|-------------|
-| `--problem TEXT` | Problem statement (inline) |
-| `--prompt-file FILE` | Read problem from file (recommended for complex prompts) |
-| `--prompt-b64 STR` | Problem as base64-encoded string |
-| `--lenses LIST` | Comma-separated expert perspectives |
-| `--models LIST` | Comma-separated model identifiers (overrides config) |
-| `--count N` | Number of council members for consensus mode |
-| `--context TEXT` | Additional context |
-| `--timeout SECS` | Per-model timeout (default: 120) |
-| `--dry-run` | Show what would run without executing |
-
-### `council-review.sh`
-Anonymizes council outputs and requests critique/ranking. Can use a single reviewer or a full democratic panel.
-
-**Usage:**
-```bash
-# 1. Democratic Review (auto-detect original lenses as reviewers)
-./skills/agents-and-council-of-llms/council-review.sh \
-  --session "skills/agents-and-council-of-llms/transcripts/<TIMESTAMP>"
-
-# 2. Specific Panel Review
-./skills/agents-and-council-of-llms/council-review.sh \
-  --session "..." \
-  --reviewers "Devil's Advocate, Optimist"
-
-# 3. Single "Supreme Court" Reviewer
-./skills/agents-and-council-of-llms/council-review.sh \
-  --session "..." \
-  --reviewers "Supreme_Court" \
-  --model "openrouter/openai/gpt-4o"
-
-# 4. Dry run
-./skills/agents-and-council-of-llms/council-review.sh \
-  --session "..." \
-  --dry-run
-```
-
-## Protocol (The "Council Chair" Loop)
-
-**Phase 0: Triage & Research**
-1.  **Analyze & Route**: Determine the Protocol Level.
-    *   **Level 1 (Executive Action)**: Simple facts, real-time data, or unambiguous consensus. Answer directly.
-    *   **Level 2 (Council Deliberation)**: Complex topics, subjective advice, code, or debates. Proceed to Pre-Research.
-2.  **Pre-Research**: If the topic is obscure/specific, use web search FIRST to gather a "Fact Brief."
-3.  **Construct Prompt**: Combine your research with the user's **verbatim prompt** so council members have ground truth to analyze. Never omit or paraphrase the user's original question.
-
-**Phase 1: Solicitation**
-1.  **Write Prompt to File**: For complex prompts, write to a temp file first to avoid shell escaping issues:
-    ```bash
-    # Write the full prompt (your research + user's question)
-    cat > /tmp/council_prompt.txt << 'PROMPT_EOF'
-    [Your research brief here]
-    
-    === USER'S QUESTION (verbatim) ===
-    [Exact user prompt here]
-    PROMPT_EOF
-    ```
-2.  **Call Council**: Use `council-convene.sh` with appropriate mode:
-    ```bash
-    ./skills/agents-and-council-of-llms/council-convene.sh \
-      --prompt-file /tmp/council_prompt.txt \
-      --lenses "Technical, Historical, Philosophical"
-    ```
-3.  **Guidance**: You may append a "Chairman's Guidance" section to enforce constraints (e.g., "Focus on academic sources," "No moralizing").
-
-**Phase 2: The Review (Branch by Type)**
-1.  **Fact-Check**: If models disagree on a fact, use web search to determine the truth immediately.
-2.  **Consensus Check**: If responses are unanimous or highly similar, **skip to Phase 3**. Only proceed to critique if there is significant disagreement.
-3.  **Critique (If needed)**: Run `council-review.sh` on the resulting session directory.
-
-**Phase 3: The Verdict**
-1.  **Synthesis**: Deliver a cohesive narrative based on the transcripts.
-2.  **Adjudication**: Explicitly state where you intervened (e.g., "Model A claimed X, but my verification search confirms Y...").
-3.  **Log**:
-    *   **READ** `council_logs.org` first (create if missing).
-    *   **PREPEND** the new entry to the top of the file.
-    *   **WRITE** the updated content back.
-
-## Model Configuration
-
-Models are configured via (in priority order):
-1. `--models` command-line argument
-2. `COUNCIL_MODELS` environment variable
-3. `~/.config/council/models.conf` file
-4. Hardcoded defaults
-
-**See `README.md` for detailed configuration instructions**, including how to discover your available models with `opencode models`.
-
-### Example Configuration File
-```bash
-# ~/.config/council/models.conf
-# One model per line, full opencode identifier
-openrouter/openai/gpt-4o-mini
-openrouter/anthropic/claude-3.5-haiku
-openrouter/google/gemini-2.0-flash-001
-```
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `COUNCIL_MODELS` | Comma-separated model list | (from config file) |
-| `COUNCIL_MODELS_FILE` | Path to models config | `~/.config/council/models.conf` |
-| `COUNCIL_REVIEW_MODEL` | Model for peer reviews | (first model in config) |
-| `COUNCIL_TIMEOUT` | Timeout per model call (seconds) | 120 |
-| `COUNCIL_DEBUG` | Set to 1 for verbose output | 0 |
-
-## Secrets Management
-- **Preferred**: Use `skills/common/secrets.sh` to load secrets from `~/.authinfo.gpg`.
-- **Fallback**: Ensure keys are in environment or `.env` (gitignored, chmod 600).
+Role-based council:
 
 ```bash
-source skills/common/secrets.sh
-# loads API keys automatically if configured
+skills/agents-and-council-of-llms/council-convene.sh \
+  --prompt-file /path/to/council-prompt.md \
+  --lenses 'Emacs Architecture,Performance and Persistence,Migration UX' \
+  --models 'openai-codex/MODEL,anthropic/MODEL,google/MODEL' \
+  --harness pi \
+  --timeout 600 \
+  --kill-after 20 \
+  --max-concurrency 3
 ```
 
-## Troubleshooting
+Consistency council:
 
-### Prompt contains special characters or is very long
-Use `--prompt-file` or `--prompt-b64` instead of inline `--problem`:
 ```bash
-# File method (recommended)
-echo "Your complex prompt with 'quotes' and $variables..." > /tmp/prompt.txt
-./council-convene.sh --prompt-file /tmp/prompt.txt --count 3
-
-# Base64 method (single safe argument)
-prompt_b64=$(cat /tmp/prompt.txt | base64 -w0)
-./council-convene.sh --prompt-b64 "$prompt_b64" --count 3
+skills/agents-and-council-of-llms/council-convene.sh \
+  --prompt-file /path/to/problem.md \
+  --count 3 \
+  --models 'openai-codex/MODEL' \
+  --harness pi
 ```
 
-### Shell tool times out before completion
-Council sessions typically take **30-90 seconds** for 3 members running in parallel. High-reasoning models may take longer.
+Always run `--dry-run` before expensive or wide fan-out. The default child policy
+is no tools and no project context; the complete fact brief must therefore be
+in the prompt. Pass `--context-policy project` only when members genuinely need
+repository instructions/context. Councils never grant mutation authority.
 
-- Ensure your shell tool timeout is ≥120 seconds (preferably 300s)
-- If timeout is not configurable, run the script manually in a terminal
-- Consider using faster models (flash/mini variants)
-- Set `COUNCIL_TIMEOUT` environment variable to adjust per-model timeout
+Important options:
 
-### "Model not found" errors
-1. Run `opencode models` to see available models
-2. Check the exact model identifier format (e.g., `openrouter/provider/model-name`)
-3. Verify your API keys are configured in `opencode`
+| Option | Meaning |
+|--------|---------|
+| `--harness` | Common authenticated harness; default Pi |
+| `--models` | Comma-separated IDs understood by that harness |
+| `--lenses` | Comma-separated expert roles |
+| `--count` | Number of consistency members |
+| `--timeout` | Per-member child deadline |
+| `--kill-after` | Grace from TERM to forced KILL |
+| `--max-concurrency` | Provider/local fan-out bound; default 4 |
+| `--cwd` | Explicit child working directory |
+| `--context-policy` | `none` or `project` |
 
-### Some council members failed
-Check individual output files in the session directory:
+Read [references/configuration.md](references/configuration.md) for model and
+environment configuration.
+
+## Peer review
+
+Run only after inspecting the initial transcript:
+
 ```bash
-ls -la ./transcripts/YYYYMMDD_HHMMSS/
-cat ./transcripts/YYYYMMDD_HHMMSS/Member_1.md
-```
-Files containing `COUNCIL_ERROR:` indicate failures. Common causes:
-- Model rate limiting
-- API key issues
-- Model-specific content filtering
-
-### Debugging
-Enable verbose output:
-```bash
-COUNCIL_DEBUG=1 ./council-convene.sh --problem "test" --count 2
+skills/agents-and-council-of-llms/council-review.sh \
+  --session ~/.local/state/bounded-llm-delegation/councils/SESSION \
+  --reviewers "Devil's Advocate,Implementability Reviewer" \
+  --model PROVIDER/MODEL \
+  --harness pi \
+  --timeout 600
 ```
 
-### Validate configuration before running
-Use dry-run mode:
-```bash
-./council-convene.sh --problem "test" --lenses "A, B, C" --dry-run
-```
+The review script reads `problem.txt` and `context.txt`, anonymizes successful and
+failed member outputs, launches persistent bounded reviewer sessions, and writes
+`PEER_REVIEW.md`. Anonymity reduces authority/model anchoring; it does not make
+responses independent after reviewers see all answers.
 
-## Session Artifacts
+## Artifact contract
 
-Each council session creates a timestamped directory in `./transcripts/`:
+Each council session contains:
 
-| File | Description |
-|------|-------------|
-| `metadata.txt` | Session parameters (problem, lenses, models) |
-| `<Lens>_PROMPT.txt` | Actual prompt sent to each member |
-| `<Lens>.md` | Raw response from each member |
-| `FULL_TRANSCRIPT.md` | Compiled transcript of all responses |
-| `review_key.txt` | Anonymization key (after review) |
-| `<Reviewer>_REVIEW.md` | Individual review outputs |
-| `PEER_REVIEW.md` | Aggregated peer reviews |
+| Artifact | Purpose |
+|----------|---------|
+| `metadata.json` | Harness, models, lenses, cwd, deadlines, concurrency |
+| `problem.txt`, `context.txt` | Exact shared task inputs |
+| `*_PROMPT.txt` | Exact member/reviewer prompts |
+| numbered `*.md` | Member responses, including explicit errors/partial output |
+| `runs/` | Bounded-delegation metadata, session IDs, stdout/stderr, status |
+| `FULL_TRANSCRIPT.md` | Initial compiled transcript |
+| `review_key.txt` | Response anonymization map |
+| `PEER_REVIEW.md` | Aggregated critiques |
+
+New transcripts default to
+`${XDG_STATE_HOME:-~/.local/state}/bounded-llm-delegation/councils/`, outside the
+skill source tree. Historical in-tree ignored transcripts remain readable. Do
+not use `/tmp` for the only copy of a consequential council.
+
+## Synthesis rules
+
+- Weight evidence and task fit, not majority.
+- Separate verified facts, observations, and recommendations.
+- Flag failed or timed-out seats; do not imply a full council succeeded.
+- Verify surprising API, security, compatibility, and performance claims.
+- Prefer concrete corrections over generic “add tests” advice.
+- Keep full responses out of the parent context unless a dispute requires them.
+- State the final decision and unresolved uncertainty plainly.

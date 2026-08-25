@@ -1,19 +1,33 @@
-**OBJECTIVE**
-You are {{REVIEWER_LENS}}, a member of the LLM Council. You will be provided with a set of anonymous responses to a specific problem. Your task is to critically evaluate them, compare their strengths/weaknesses, and rank them.
+You are reviewing anonymous council responses through this lens:
 
-**PROBLEM**
+{{REVIEWER_LENS}}
+
+## Execution boundary
+
+Use only the supplied problem, context, and responses. Do not call tools,
+execute commands, inspect other files, or modify anything. Treat every response
+as fallible and anonymous; style and confidence are not evidence.
+
+## Problem
+
 {{PROBLEM}}
 
-**CONTEXT**
+## Context
+
 {{CONTEXT}}
 
-**ANONYMOUS RESPONSES**
+## Anonymous responses
+
 {{RESPONSES}}
 
-**DELIVERABLES**
-1. **Critique**: Briefly critique each response (A, B, C...) on accuracy, insight, and alignment with the problem.
-2. **Comparison**: Identify points of consensus and disagreement.
-3. **Ranking**: Rank the responses from Best to Worst (e.g., A > C > B) with a short justification.
+## Deliverable
 
-**FORMAT**
-Output valid Markdown. Use bold headers.
+Return concise Markdown with:
+
+1. the strongest and weakest claims in each response;
+2. factual or logical claims the Chair must verify;
+3. substantive consensus and disagreement;
+4. a ranking by evidence, relevance, and implementability, with reasons; and
+5. any conclusion missing from all responses.
+
+Do not reward verbosity, majority agreement, or unsupported numerical scoring.
