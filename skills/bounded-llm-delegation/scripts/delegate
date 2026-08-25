@@ -1,0 +1,353 @@
+#!/usr/bin/env bash
+# Run one authenticated LLM harness under bounded, durable supervision.
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: delegate --harness NAME --prompt-file FILE [OPTIONS] [-- EXTRA_ARGS...]
+
+Harnesses: pi, codex, opencode, claude, hermes, gemini
+
+Required:
+  --harness NAME           Harness adapter to use
+  --prompt-file FILE       Complete child prompt
+
+Options:
+  --cwd DIR                Child working directory (default: current directory)
+  --model ID               Harness model override
+  --provider ID            Provider override where supported
+  --thinking LEVEL         Reasoning/effort/variant where supported
+  --policy POLICY          none, read-only, or default (default: read-only)
+  --context POLICY         project or none (default: project)
+  --deadline SECONDS       Child process deadline (default: 900)
+  --kill-after SECONDS     TERM-to-KILL grace (default: 20)
+  --name NAME              Durable run/session label
+  --resume ID              Resume an existing harness session
+  --run-dir DIR            Exact durable artifact directory
+  --prompt-retention MODE  full, hash, or none (default: full)
+  --allow-mutation         Required with --policy default
+  --allow-auto-approve     Required for Hermes one-shot mode
+  --dry-run                Build metadata/command without calling a model
+  -h, --help               Show this help
+
+The launcher prints RUN_DIR=... after completion. Read final.md, stderr.log,
+stdout.log, status, metadata.json, and result.json from that directory.
+EOF
+}
+
+HARNESS=""
+PROMPT_FILE=""
+CWD="$PWD"
+MODEL=""
+PROVIDER=""
+THINKING=""
+POLICY="read-only"
+CONTEXT_POLICY="project"
+DEADLINE=900
+KILL_AFTER=20
+NAME=""
+RESUME=""
+RUN_DIR=""
+PROMPT_RETENTION="full"
+ALLOW_MUTATION=0
+ALLOW_AUTO_APPROVE=0
+DRY_RUN=0
+EXTRA_ARGS=()
+
+while (($#)); do
+    case "$1" in
+        --harness) HARNESS=${2:?}; shift 2 ;;
+        --prompt-file) PROMPT_FILE=${2:?}; shift 2 ;;
+        --cwd) CWD=${2:?}; shift 2 ;;
+        --model) MODEL=${2:?}; shift 2 ;;
+        --provider) PROVIDER=${2:?}; shift 2 ;;
+        --thinking) THINKING=${2:?}; shift 2 ;;
+        --policy) POLICY=${2:?}; shift 2 ;;
+        --context) CONTEXT_POLICY=${2:?}; shift 2 ;;
+        --deadline) DEADLINE=${2:?}; shift 2 ;;
+        --kill-after) KILL_AFTER=${2:?}; shift 2 ;;
+        --name) NAME=${2:?}; shift 2 ;;
+        --resume) RESUME=${2:?}; shift 2 ;;
+        --run-dir) RUN_DIR=${2:?}; shift 2 ;;
+        --prompt-retention) PROMPT_RETENTION=${2:?}; shift 2 ;;
+        --allow-mutation) ALLOW_MUTATION=1; shift ;;
+        --allow-auto-approve) ALLOW_AUTO_APPROVE=1; shift ;;
+        --dry-run) DRY_RUN=1; shift ;;
+        -h|--help) usage; exit 0 ;;
+        --) shift; EXTRA_ARGS=("$@"); break ;;
+        *) echo "delegate: unknown argument: $1" >&2; usage >&2; exit 2 ;;
+    esac
+done
+
+[[ -n "$HARNESS" ]] || { echo "delegate: --harness is required" >&2; exit 2; }
+[[ -n "$PROMPT_FILE" ]] || { echo "delegate: --prompt-file is required" >&2; exit 2; }
+[[ -r "$PROMPT_FILE" ]] || { echo "delegate: prompt is not readable: $PROMPT_FILE" >&2; exit 2; }
+[[ -d "$CWD" ]] || { echo "delegate: cwd is not a directory: $CWD" >&2; exit 2; }
+[[ "$DEADLINE" =~ ^[1-9][0-9]*$ ]] || { echo "delegate: deadline must be a positive integer" >&2; exit 2; }
+[[ "$KILL_AFTER" =~ ^[1-9][0-9]*$ ]] || { echo "delegate: kill-after must be a positive integer" >&2; exit 2; }
+[[ "$POLICY" =~ ^(none|read-only|default)$ ]] || { echo "delegate: invalid policy: $POLICY" >&2; exit 2; }
+[[ "$CONTEXT_POLICY" =~ ^(project|none)$ ]] || { echo "delegate: invalid context policy: $CONTEXT_POLICY" >&2; exit 2; }
+[[ "$PROMPT_RETENTION" =~ ^(full|hash|none)$ ]] || { echo "delegate: invalid prompt retention: $PROMPT_RETENTION" >&2; exit 2; }
+if [[ "$POLICY" == default && "$ALLOW_MUTATION" -ne 1 ]]; then
+    echo "delegate: --policy default requires --allow-mutation" >&2
+    exit 2
+fi
+if [[ "$HARNESS" == hermes && "$ALLOW_AUTO_APPROVE" -ne 1 ]]; then
+    echo "delegate: Hermes one-shot auto-bypasses approvals; pass --allow-auto-approve" >&2
+    exit 2
+fi
+command -v timeout >/dev/null || { echo "delegate: GNU timeout is required" >&2; exit 2; }
+
+case "$HARNESS" in
+    pi) HARNESS_BIN=${PI_BIN:-pi} ;;
+    codex) HARNESS_BIN=${CODEX_BIN:-codex} ;;
+    opencode) HARNESS_BIN=${OPENCODE_BIN:-opencode} ;;
+    claude) HARNESS_BIN=${CLAUDE_BIN:-claude} ;;
+    hermes) HARNESS_BIN=${HERMES_BIN:-hermes} ;;
+    gemini) HARNESS_BIN=${GEMINI_BIN:-gemini} ;;
+    *) echo "delegate: unsupported harness: $HARNESS" >&2; exit 2 ;;
+esac
+if [[ -n "$PROVIDER" && ! "$HARNESS" =~ ^(pi|hermes)$ ]]; then
+    echo "delegate: --provider is not supported by the $HARNESS adapter" >&2
+    exit 2
+fi
+if [[ -n "$THINKING" && ! "$HARNESS" =~ ^(pi|opencode|claude)$ ]]; then
+    echo "delegate: --thinking is not supported by the $HARNESS adapter" >&2
+    exit 2
+fi
+command -v "$HARNESS_BIN" >/dev/null || { echo "delegate: harness executable not found: $HARNESS_BIN" >&2; exit 127; }
+
+umask 077
+TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+if [[ -z "$NAME" ]]; then
+    NAME="delegation-$HARNESS-$TIMESTAMP"
+fi
+if [[ -z "$RUN_DIR" ]]; then
+    STATE_ROOT=${XDG_STATE_HOME:-"$HOME/.local/state"}
+    RUN_DIR="$STATE_ROOT/bounded-llm-delegation/runs/${TIMESTAMP}-$$-$HARNESS"
+fi
+mkdir -p "$RUN_DIR"
+RUN_DIR=$(cd "$RUN_DIR" && pwd -P)
+CWD=$(cd "$CWD" && pwd -P)
+PROMPT_FILE=$(cd "$(dirname "$PROMPT_FILE")" && printf '%s/%s\n' "$PWD" "$(basename "$PROMPT_FILE")")
+
+PROMPT_SHA256=$(sha256sum "$PROMPT_FILE" | awk '{print $1}')
+PROMPT_BYTES=$(wc -c < "$PROMPT_FILE" | tr -d ' ')
+case "$PROMPT_RETENTION" in
+    full) cp "$PROMPT_FILE" "$RUN_DIR/prompt.md" ;;
+    hash) printf '%s  %s\n' "$PROMPT_SHA256" "$(basename "$PROMPT_FILE")" > "$RUN_DIR/prompt.sha256" ;;
+    none) : ;;
+esac
+
+VERSION=$({ timeout --signal=TERM --kill-after=2s 10s "$HARNESS_BIN" --version || true; } 2>&1 | head -5)
+printf '%s\n' "$VERSION" > "$RUN_DIR/harness-version.txt"
+
+new_uuid() {
+    python3 - <<'PY'
+import uuid
+print(uuid.uuid4())
+PY
+}
+
+SESSION_ID="$RESUME"
+PROMPT_TRANSPORT="stdin"
+POLICY_ENFORCEMENT=""
+CONTEXT_ENFORCEMENT=""
+POLICY_PROMPT_INJECTED=0
+WEAK_POLICY_PREFIX=""
+case "$POLICY" in
+    none) WEAK_POLICY_PREFIX=$'Execution policy: do not call tools, execute commands, or modify anything. Use only the supplied prompt and return analysis.\n\n' ;;
+    read-only) WEAK_POLICY_PREFIX=$'Execution policy: inspect only. Do not modify files, Git state, credentials, or services.\n\n' ;;
+esac
+CMD=()
+
+case "$HARNESS" in
+    pi)
+        if [[ -z "$SESSION_ID" ]]; then SESSION_ID=$(new_uuid); fi
+        CMD=("$HARNESS_BIN" --print --name "$NAME")
+        if [[ -n "$RESUME" ]]; then
+            CMD+=(--session "$RESUME")
+        else
+            CMD+=(--session-id "$SESSION_ID")
+        fi
+        [[ -n "$MODEL" ]] && CMD+=(--model "$MODEL")
+        [[ -n "$PROVIDER" ]] && CMD+=(--provider "$PROVIDER")
+        [[ -n "$THINKING" ]] && CMD+=(--thinking "$THINKING")
+        case "$POLICY" in
+            none) CMD+=(--no-tools); POLICY_ENFORCEMENT="no tools" ;;
+            read-only) CMD+=(--tools read,grep,find,ls); POLICY_ENFORCEMENT="read-only tool allowlist" ;;
+            default) POLICY_ENFORCEMENT="default tools; mutation explicitly allowed" ;;
+        esac
+        if [[ "$CONTEXT_POLICY" == none ]]; then
+            CMD+=(--no-context-files --no-extensions --no-skills --no-prompt-templates)
+            CONTEXT_ENFORCEMENT="project context/resources disabled"
+        else
+            CONTEXT_ENFORCEMENT="normal project context"
+        fi
+        ;;
+    codex)
+        if [[ -n "$RESUME" ]]; then
+            CMD=("$HARNESS_BIN" exec resume)
+            [[ -n "$MODEL" ]] && CMD+=(-m "$MODEL")
+            [[ "$CONTEXT_POLICY" == none ]] && CMD+=(--ignore-rules)
+            CMD+=(-o "$RUN_DIR/final.md" "$RESUME" -)
+            POLICY_ENFORCEMENT="inherited from persisted Codex session"
+        else
+            CMD=("$HARNESS_BIN" exec -C "$CWD" --color never -o "$RUN_DIR/final.md")
+            [[ -n "$MODEL" ]] && CMD+=(-m "$MODEL")
+            case "$POLICY" in
+                none|read-only) CMD+=(-s read-only); POLICY_ENFORCEMENT="read-only sandbox; no strict no-tool mode" ;;
+                default) CMD+=(-s workspace-write); POLICY_ENFORCEMENT="workspace-write sandbox; mutation explicitly allowed" ;;
+            esac
+            [[ "$CONTEXT_POLICY" == none ]] && CMD+=(--ignore-rules)
+            CMD+=(-)
+        fi
+        CONTEXT_ENFORCEMENT=$([[ "$CONTEXT_POLICY" == none ]] && echo "project rules ignored" || echo "normal Codex rules")
+        ;;
+    opencode)
+        CMD=("$HARNESS_BIN" run --dir "$CWD" --title "$NAME")
+        [[ -n "$RESUME" ]] && CMD+=(--session "$RESUME")
+        [[ -n "$MODEL" ]] && CMD+=(--model "$MODEL")
+        [[ -n "$THINKING" ]] && CMD+=(--variant "$THINKING")
+        [[ "$CONTEXT_POLICY" == none ]] && CMD+=(--pure)
+        POLICY_ENFORCEMENT="prompt-only; run command has no strict read-only/no-tool flag"
+        CONTEXT_ENFORCEMENT=$([[ "$CONTEXT_POLICY" == none ]] && echo "external plugins disabled; project rules may remain" || echo "normal OpenCode context")
+        PROMPT_TRANSPORT="argv"
+        [[ -n "$WEAK_POLICY_PREFIX" ]] && POLICY_PROMPT_INJECTED=1
+        CMD+=("${WEAK_POLICY_PREFIX}$(cat "$PROMPT_FILE")")
+        ;;
+    claude)
+        CMD=("$HARNESS_BIN" --print --output-format text --name "$NAME")
+        if [[ -n "$RESUME" ]]; then
+            CMD+=(--resume "$RESUME")
+            SESSION_ID="$RESUME"
+        else
+            SESSION_ID=$(new_uuid)
+            CMD+=(--session-id "$SESSION_ID")
+        fi
+        [[ -n "$MODEL" ]] && CMD+=(--model "$MODEL")
+        [[ -n "$THINKING" ]] && CMD+=(--effort "$THINKING")
+        case "$POLICY" in
+            none) CMD+=(--permission-mode plan --tools ""); POLICY_ENFORCEMENT="no tools plus plan mode" ;;
+            read-only) CMD+=(--permission-mode plan --tools Read,Grep,Glob); POLICY_ENFORCEMENT="read tools plus plan mode" ;;
+            default) CMD+=(--permission-mode acceptEdits); POLICY_ENFORCEMENT="edit acceptance; mutation explicitly allowed" ;;
+        esac
+        if [[ "$CONTEXT_POLICY" == none ]]; then
+            CMD+=(--disable-slash-commands --setting-sources user)
+            CONTEXT_ENFORCEMENT="project settings/skills reduced; CLAUDE context exclusion not guaranteed"
+        else
+            CONTEXT_ENFORCEMENT="normal Claude context"
+        fi
+        ;;
+    hermes)
+        CMD=("$HARNESS_BIN")
+        [[ -n "$RESUME" ]] && CMD+=(--resume "$RESUME")
+        [[ -n "$MODEL" ]] && CMD+=(--model "$MODEL")
+        [[ -n "$PROVIDER" ]] && CMD+=(--provider "$PROVIDER")
+        [[ "$CONTEXT_POLICY" == none ]] && CMD+=(--ignore-rules)
+        [[ -n "$WEAK_POLICY_PREFIX" ]] && POLICY_PROMPT_INJECTED=1
+        CMD+=(--oneshot "${WEAK_POLICY_PREFIX}$(cat "$PROMPT_FILE")")
+        PROMPT_TRANSPORT="argv"
+        POLICY_ENFORCEMENT="one-shot auto-bypasses approvals; caller explicitly accepted"
+        CONTEXT_ENFORCEMENT=$([[ "$CONTEXT_POLICY" == none ]] && echo "project rules ignored" || echo "normal Hermes rules/memory")
+        ;;
+    gemini)
+        CMD=("$HARNESS_BIN" --output-format text --prompt "")
+        [[ -n "$RESUME" ]] && CMD+=(--resume "$RESUME")
+        [[ -n "$MODEL" ]] && CMD+=(--model "$MODEL")
+        case "$POLICY" in
+            none|read-only) CMD+=(--approval-mode plan); POLICY_ENFORCEMENT="plan mode; no strict no-tool mode" ;;
+            default) CMD+=(--approval-mode auto_edit); POLICY_ENFORCEMENT="auto-edit; mutation explicitly allowed" ;;
+        esac
+        CONTEXT_ENFORCEMENT=$([[ "$CONTEXT_POLICY" == none ]] && echo "project context exclusion not supported by adapter" || echo "normal Gemini context")
+        ;;
+esac
+CMD+=("${EXTRA_ARGS[@]}")
+
+printf '%s\n' "$SESSION_ID" > "$RUN_DIR/session-id.txt"
+if [[ "$PROMPT_TRANSPORT" == argv ]]; then
+    printf '%q <PROMPT_IN_ARGV>; full command intentionally not logged\n' "$HARNESS_BIN" > "$RUN_DIR/command.txt"
+else
+    printf '%q ' "${CMD[@]}" > "$RUN_DIR/command.txt"
+    printf '\n' >> "$RUN_DIR/command.txt"
+fi
+
+RESUMED=0
+[[ -n "$RESUME" ]] && RESUMED=1
+STARTED_AT=$(date --iso-8601=seconds)
+STARTED_EPOCH=$(date +%s)
+python3 - "$RUN_DIR/metadata.json" <<PY
+import json, sys
+json.dump({
+  "harness": ${HARNESS@Q},
+  "model": ${MODEL@Q},
+  "provider": ${PROVIDER@Q},
+  "thinking": ${THINKING@Q},
+  "name": ${NAME@Q},
+  "cwd": ${CWD@Q},
+  "policy": ${POLICY@Q},
+  "policy_enforcement": ${POLICY_ENFORCEMENT@Q},
+  "policy_prompt_injected": bool(int(${POLICY_PROMPT_INJECTED@Q})),
+  "context_policy": ${CONTEXT_POLICY@Q},
+  "context_enforcement": ${CONTEXT_ENFORCEMENT@Q},
+  "deadline_seconds": int(${DEADLINE@Q}),
+  "kill_after_seconds": int(${KILL_AFTER@Q}),
+  "prompt_sha256": ${PROMPT_SHA256@Q},
+  "prompt_bytes": int(${PROMPT_BYTES@Q}),
+  "prompt_retention": ${PROMPT_RETENTION@Q},
+  "prompt_transport": ${PROMPT_TRANSPORT@Q},
+  "session_id": ${SESSION_ID@Q},
+  "resumed": bool(int(${RESUMED@Q})),
+  "started_at": ${STARTED_AT@Q},
+  "dry_run": bool(int(${DRY_RUN@Q}))
+}, open(sys.argv[1], "w"), indent=2)
+PY
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY_RUN\n' > "$RUN_DIR/status"
+    printf 'RUN_DIR=%s\n' "$RUN_DIR"
+    exit 0
+fi
+
+echo "delegate: run directory: $RUN_DIR" >&2
+echo "delegate: harness=$HARNESS policy=$POLICY deadline=${DEADLINE}s" >&2
+set +e
+(
+    cd "$CWD"
+    timeout --signal=TERM --kill-after="${KILL_AFTER}s" "${DEADLINE}s" \
+        "${CMD[@]}" < "$PROMPT_FILE"
+) > "$RUN_DIR/stdout.log" 2> "$RUN_DIR/stderr.log"
+EXIT_CODE=$?
+set -e
+
+ENDED_AT=$(date --iso-8601=seconds)
+ENDED_EPOCH=$(date +%s)
+ELAPSED=$((ENDED_EPOCH - STARTED_EPOCH))
+printf '%s\n' "$EXIT_CODE" > "$RUN_DIR/status"
+
+if [[ "$HARNESS" == codex && -z "$SESSION_ID" ]]; then
+    SESSION_ID=$(sed -nE 's/^session id:[[:space:]]*([0-9a-f-]+)[[:space:]]*$/\1/p' "$RUN_DIR/stderr.log" | head -1)
+    printf '%s\n' "$SESSION_ID" > "$RUN_DIR/session-id.txt"
+fi
+if [[ ! -s "$RUN_DIR/final.md" ]]; then
+    cp "$RUN_DIR/stdout.log" "$RUN_DIR/final.md"
+fi
+
+FINAL_BYTES=$(wc -c < "$RUN_DIR/final.md" | tr -d ' ')
+TIMED_OUT=0
+[[ "$EXIT_CODE" -eq 124 || "$EXIT_CODE" -eq 137 ]] && TIMED_OUT=1
+python3 - "$RUN_DIR/result.json" <<PY
+import json, sys
+json.dump({
+  "exit_code": int(${EXIT_CODE@Q}),
+  "timed_out": bool(int(${TIMED_OUT@Q})),
+  "started_at": ${STARTED_AT@Q},
+  "ended_at": ${ENDED_AT@Q},
+  "elapsed_seconds": int(${ELAPSED@Q}),
+  "session_id": ${SESSION_ID@Q},
+  "final_bytes": int(${FINAL_BYTES@Q})
+}, open(sys.argv[1], "w"), indent=2)
+PY
+
+printf 'RUN_DIR=%s\n' "$RUN_DIR"
+exit "$EXIT_CODE"

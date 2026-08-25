@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+DELEGATE="$SCRIPT_DIR/delegate"
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+mkdir -p "$TMP/bin" "$TMP/runs"
+
+cat > "$TMP/bin/fake-harness" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+name=$(basename "$0")
+if [[ " ${*:-} " == *" --version "* ]]; then
+    echo "$name fake 1.0"
+    exit 0
+fi
+if [[ "${FAKE_SLEEP:-0}" != 0 ]]; then
+    sleep "$FAKE_SLEEP" &
+    child=$!
+    [[ -n "${FAKE_CHILD_PID_FILE:-}" ]] && printf '%s\n' "$child" > "$FAKE_CHILD_PID_FILE"
+    wait "$child"
+fi
+printf '%s\n' "$*" > "${FAKE_ARGS_LOG:?}.$name"
+stdin=$(cat)
+if [[ "$name" == codex ]]; then
+    out=""
+    args=("$@")
+    for ((i=0; i<${#args[@]}; i++)); do
+        if [[ "${args[$i]}" == -o ]]; then out=${args[$((i+1))]}; fi
+    done
+    [[ -n "$out" ]] && printf 'fake final from %s\n' "$name" > "$out"
+    echo 'session id: 11111111-1111-4111-8111-111111111111' >&2
+    echo 'reviewed source mentioned session id: 22222222-2222-4222-8222-222222222222' >&2
+else
+    printf 'fake final from %s; stdin=%s\n' "$name" "$stdin"
+fi
+EOF
+chmod +x "$TMP/bin/fake-harness"
+for name in pi codex opencode claude hermes gemini; do
+    ln -s fake-harness "$TMP/bin/$name"
+done
+
+export PATH="$TMP/bin:$PATH"
+export FAKE_ARGS_LOG="$TMP/args"
+printf 'SECRET_PROMPT_VALUE\n' > "$TMP/prompt.md"
+
+for harness in pi codex opencode claude hermes gemini; do
+    args=(
+        --harness "$harness"
+        --prompt-file "$TMP/prompt.md"
+        --cwd "$TMP"
+        --policy none
+        --context none
+        --deadline 5
+        --kill-after 1
+        --run-dir "$TMP/runs/$harness"
+        --name "test-$harness"
+    )
+    [[ "$harness" == hermes ]] && args+=(--allow-auto-approve)
+    "$DELEGATE" "${args[@]}" >/dev/null
+    [[ $(<"$TMP/runs/$harness/status") == 0 ]]
+    grep -q 'fake final' "$TMP/runs/$harness/final.md"
+    python3 -m json.tool "$TMP/runs/$harness/metadata.json" >/dev/null
+    python3 -m json.tool "$TMP/runs/$harness/result.json" >/dev/null
+    if [[ "$harness" == opencode || "$harness" == hermes ]]; then
+        ! grep -q 'SECRET_PROMPT_VALUE' "$TMP/runs/$harness/command.txt"
+        grep -q 'PROMPT_IN_ARGV' "$TMP/runs/$harness/command.txt"
+    fi
+done
+python3 - <<PY
+import json
+with open("$TMP/runs/codex/result.json") as fh:
+    assert json.load(fh)["session_id"] == "11111111-1111-4111-8111-111111111111"
+PY
+
+if "$DELEGATE" --harness pi --prompt-file "$TMP/prompt.md" \
+    --run-dir "$TMP/runs/refuse-mutation" --policy default >/dev/null 2>&1; then
+    echo 'expected default mutation policy to be refused' >&2
+    exit 1
+fi
+
+set +e
+FAKE_SLEEP=5 FAKE_CHILD_PID_FILE="$TMP/child.pid" "$DELEGATE" \
+    --harness pi \
+    --prompt-file "$TMP/prompt.md" \
+    --cwd "$TMP" \
+    --policy none \
+    --deadline 1 \
+    --kill-after 1 \
+    --run-dir "$TMP/runs/timeout" >/dev/null 2>&1
+status=$?
+set -e
+[[ "$status" == 124 ]]
+[[ $(<"$TMP/runs/timeout/status") == 124 ]]
+child_pid=$(<"$TMP/child.pid")
+sleep 0.2
+if kill -0 "$child_pid" 2>/dev/null; then
+    kill -KILL "$child_pid" 2>/dev/null || true
+    echo "timeout left descendant process $child_pid running" >&2
+    exit 1
+fi
+python3 - <<PY
+import json
+with open("$TMP/runs/timeout/result.json") as fh:
+    assert json.load(fh)["timed_out"] is True
+PY
+
+echo 'delegate tests: OK'
