@@ -196,3 +196,8 @@ Before handing off messages or making authorized commits, verify:
 - no message claims tests, docs, compatibility, or behavior absent from its diff;
 - each staged diff matches its message; and
 - unrelated work remains untouched.
+
+## Format of the presentation
+Present the text of both the commit header and its body as left-flush text.
+The user will copy and paste the text, so keeping it flush against the left
+margin means no extra steps deleting whitespace. 
