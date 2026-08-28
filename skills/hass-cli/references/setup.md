@@ -35,7 +35,9 @@ directory without path rewrites or compatibility symlinks.
 - `HA_WEATHER_ENTITY`: exact weather entity when zero or multiple `weather.*`
   entities exist
 
-Already-exported variables take precedence over `.env` values.
+Already-exported variables take precedence over `.env` values. Values may be
+unquoted or enclosed in matching single or double quotes. The loader rejects
+unmatched outer quotes without printing the value.
 
 ## Diagnose in order
 
