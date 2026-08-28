@@ -15,6 +15,14 @@ SPEC.loader.exec_module(ha_intent)
 
 
 class IntentInterpretationTests(unittest.TestCase):
+    def test_wrapper_documents_local_agent_boundary(self) -> None:
+        self.assertEqual(
+            ha_intent.HA_CONVERSATION_AGENT,
+            "conversation.home_assistant",
+        )
+        self.assertIn("not equivalent to", ha_intent.__doc__ or "")
+        self.assertIn("selected Assist pipeline", ha_intent.__doc__ or "")
+
     def test_known_no_match_allows_fallback(self) -> None:
         output, code = ha_intent.interpret(
             "turn on reading lamp",

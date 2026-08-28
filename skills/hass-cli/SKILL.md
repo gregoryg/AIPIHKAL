@@ -48,16 +48,16 @@ not on `PATH`. See `references/setup.md` for installation and troubleshooting.
 
 ## Choose one wrapper
 
-| User intent | First command |
-|---|---|
-| Find or identify something | `scripts/ha-find "QUERY"` |
-| List controllable things in an area | `scripts/ha-area-summary "AREA"` |
-| Ask whether something is on, off, open, or closed | `scripts/ha-status "QUERY"` |
-| Turn on or open one resolved entity | `scripts/ha-on "QUERY"` |
-| Turn off or close one resolved entity | `scripts/ha-off "QUERY"` |
-| Activate a scene, script, or automation | `scripts/ha-trigger "QUERY"` |
-| Run a phrase known to Home Assistant Assist | `scripts/ha-intent "PHRASE"` |
-| Ask for a Home Assistant weather forecast | `scripts/ha-weather [OPTIONS]` |
+| User intent                                       | First command                    |
+|---------------------------------------------------|----------------------------------|
+| Find or identify something                        | `scripts/ha-find "QUERY"`        |
+| List controllable things in an area               | `scripts/ha-area-summary "AREA"` |
+| Ask whether something is on, off, open, or closed | `scripts/ha-status "QUERY"`      |
+| Turn on or open one resolved entity               | `scripts/ha-on "QUERY"`          |
+| Turn off or close one resolved entity             | `scripts/ha-off "QUERY"`         |
+| Activate a scene, script, or automation           | `scripts/ha-trigger "QUERY"`     |
+| Run a phrase through HA's built-in local agent    | `scripts/ha-intent "PHRASE"`     |
+| Ask for a Home Assistant weather forecast         | `scripts/ha-weather [OPTIONS]`   |
 
 Paths above are relative to this skill directory. When the execution environment
 does not preserve a working directory, use the actual absolute path to the skill.
@@ -100,7 +100,9 @@ immediately resend a command to a moving door or blind.
 
 Use `ha-intent` only for a phrase documented by the home companion or explicitly
 requested by the user. It targets Home Assistant's built-in
-`conversation.home_assistant` agent, not an arbitrary conversational LLM.
+`conversation.home_assistant` agent, not an arbitrary conversational LLM or the
+selected Assist pipeline. It tests local NLU and custom sentence behavior; an
+LLM-backed production pipeline may route the same text differently.
 
 - `ok`: stop; the intent matched.
 - `no_match`: a direct wrapper may be used if the requested action is clear.

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Send a natural-language phrase through Home Assistant's intent pipeline.
+"""Send a phrase to Home Assistant's built-in local conversation agent.
 
-Uses the HA built-in conversation agent (conversation.home_assistant), which
-applies HA's NLU intent matching — the same path as voice commands via Assist.
+Uses ``conversation.home_assistant`` for deterministic NLU intent matching.
+This is useful for custom sentence automations, but it is not equivalent to
+running a selected Assist pipeline backed by an LLM conversation agent. A
+production pipeline may route the same phrase differently.
 
-This means custom intent phrases and automations triggered by voice (e.g.
-"turn off bathroom" → timed bathroom automation) will fire correctly, rather
-than being replaced by a direct entity service call.
+Custom local phrases such as "turn off bathroom" can trigger their intended
+automations instead of being replaced by a direct entity service call.
 
 Exit codes:
   0  intent matched and executed (action_done)
