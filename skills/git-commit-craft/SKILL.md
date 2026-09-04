@@ -27,7 +27,7 @@ When the user authorizes commits:
 
 Read the repository's instructions first. Then inspect, as applicable:
 
-```text
+```sh
 git status --short --branch
 git diff --stat
 git diff --numstat
@@ -95,7 +95,7 @@ For an LLM authorized to stage or commit:
 
 Before each commit, inspect the full staged diff and run appropriate checks such as:
 
-```text
+```sh
 git diff --cached --stat
 git diff --cached --check
 git diff --cached
@@ -161,7 +161,7 @@ ordered model, and an honest limitation.
 Wrap body text at the repository's width; use 78 columns by default. Apply `fold`
 to body text, not the subject:
 
-```text
+```sh
 fold -s -w 78 draft-body.txt
 awk 'length($0) > 78 { print NR ":" length($0) ":" $0 }' message.txt
 ```
@@ -179,7 +179,7 @@ Give the user an ordered commit series. For each commit, provide:
 4. any dependency on an earlier commit.
 
 Call out assumptions and uncertain boundaries. If several groupings are genuinely
-good, recommend one and explain the tradeoff briefly.
+good, recommend one and explain the tradeoff succinctly.
 
 Read [references/examples.md](references/examples.md) when examples would help,
 when choosing between repository styles, or when designing a multi-commit split.
@@ -200,4 +200,4 @@ Before handing off messages or making authorized commits, verify:
 ## Format of the presentation
 Present the text of both the commit header and its body as left-flush text.
 The user will copy and paste the text, so keeping it flush against the left
-margin means no extra steps deleting whitespace. 
+margin means no extra steps deleting whitespace.
