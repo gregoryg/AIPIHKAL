@@ -35,12 +35,12 @@ Paths below are relative to this skill directory. The wrappers use exported
 `HASS_SERVER` and `HASS_TOKEN`; when absent, they reuse the sibling `hass-cli`
 environment loader without copying credentials.
 
-| Need | Command |
-|---|---|
+| Need                                                   | Command                                       |
+|--------------------------------------------------------|-----------------------------------------------|
 | Query calendar events with a required service response | `scripts/ha-calendar-events ENTITY START END` |
-| List recent automation or script traces | `scripts/ha-trace list DOMAIN ITEM_ID` |
-| Inspect one compact detailed trace | `scripts/ha-trace get DOMAIN ITEM_ID RUN_ID` |
-| Exercise the selected production Assist pipeline | `scripts/ha-assist-run --execute "PHRASE"` |
+| List recent automation or script traces                | `scripts/ha-trace list DOMAIN ITEM_ID`        |
+| Inspect one compact detailed trace                     | `scripts/ha-trace get DOMAIN ITEM_ID RUN_ID`  |
+| Exercise the selected production Assist pipeline       | `scripts/ha-assist-run --execute "PHRASE"`    |
 
 All output is bounded JSON. Exit codes are `0` for success, `2` for invalid or
 rejected work, and `3` for authentication, transport, dependency, timeout, or
