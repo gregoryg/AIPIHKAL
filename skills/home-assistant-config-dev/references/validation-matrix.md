@@ -9,6 +9,7 @@ Do not collapse “valid” into one bit. Record which layers were actually test
 | Installation | Does the installed object equal the candidate? | Normalized exact comparison and hashes |
 | Activation | Is the intended entity loaded and enabled? | State, attributes, selective reload result |
 | Action | Does the action sequence work independently? | Script call and completed trace |
+| Assist exposure | Are required tools exposed and stale or conflicting entities excluded? | Entity-registry conversation options, tool schema, negative allowlist audit |
 | Trigger | Does the production trigger route correctly? | Actual Assist/calendar/state path and trace |
 | Parallelism | Do independent events avoid overwrite or suppression? | Simultaneous test runs and distinct traces |
 | Cancellation | Does removing the source prevent action? | Deleted event/object plus absence of trace |
@@ -25,6 +26,12 @@ production pipeline itself is under test, and inspect `engine` plus
 
 An Assist phrase can perform actions. The explicit flag acknowledges that risk;
 it does not make arbitrary text safe.
+
+Entity exposure is storage-backed configuration, not an incidental UI setting.
+For an Assist-facing change, inspect both required and forbidden entities'
+`conversation.should_expose` options. Test wording outside deterministic local
+sentence patterns and correlate the response with the expected script or
+automation trace; otherwise a correct answer may have exercised the wrong route.
 
 ## Time-dependent behavior
 

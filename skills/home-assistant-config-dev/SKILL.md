@@ -24,7 +24,9 @@ Before mutation:
    Read [persistence-boundaries.md](references/persistence-boundaries.md).
 4. Name the inverse operation and external cleanup before changing anything.
 5. Identify the exact objects and files expected to change.
-6. Stop if the supported interface cannot capture and restore the original.
+6. For Assist-facing work, enumerate required and forbidden exposed entities and
+   capture their live entity-registry conversation options.
+7. Stop if the supported interface cannot capture and restore the original.
 
 Never edit `.storage` generically. Never paste tokens into chat or commands.
 Never treat Git as disaster recovery when the repository is only a projection.
@@ -73,6 +75,33 @@ Add `HA_DEV_SMOKE_ASSIST=1` only when a production-pipeline query is authorized.
 The default phrase is “What time is it?”; override it with
 `HA_DEV_SMOKE_ASSIST_PHRASE` only after reviewing its possible actions.
 
+## Audit Assist exposure
+
+Treat entity exposure as an explicit storage-backed dependency. A valid entity,
+script, automation, or prompt does not imply that the selected LLM can see or
+invoke it. Creation, rename, replacement, integration migration, and deletion
+can all change the effective allowlist outside the curated YAML snapshot.
+
+For every Assist-facing change:
+
+1. List the exact required entities and action tools.
+2. Inspect each live entity-registry `conversation.should_expose` value.
+3. Inspect exposed scripts' current fields and action-response contracts; a tool
+   schema that exists but returns an invalid shape is still broken.
+4. Search for stale, duplicate, unavailable, renamed, or superseded exposed
+   entities that could conflict with the authoritative source.
+5. Keep implementation-only entities unexposed when a narrower script provides
+   the intended contract.
+6. Test a safe phrase through the selected production pipeline, including one
+   wording that bypasses deterministic local sentence triggers; correlate the
+   result with the invoked script or automation trace.
+7. Record storage-backed exposure semantics in repository documentation because
+   a pull-only snapshot cannot preserve or review them directly.
+
+Audit positive and negative space. Confirming the required tool is exposed does
+not establish that a stale contradictory helper is absent, and confirming stale
+entities are absent does not establish that the required tool is available.
+
 ## Follow the live-first workflow
 
 For authorized YAML-backed automation or script changes:
@@ -87,11 +116,13 @@ For authorized YAML-backed automation or script changes:
 6. **Compare:** fetch installed objects and compare normalized JSON exactly.
 7. **Activate:** reload only required domains, then explicitly enable behavior.
 8. **Test actions:** exercise action sequences independently where possible.
-9. **Test triggers:** use the actual production path and inspect traces.
-10. **Verify effects:** inspect external state and clean conspicuous test data.
-11. **Pull back:** preview the curated rsync, require only expected paths, apply,
+9. **Audit exposure:** verify the required and forbidden Assist allowlist when
+   the feature participates in conversation.
+10. **Test triggers:** use the actual production path and inspect traces.
+11. **Verify effects:** inspect external state and clean conspicuous test data.
+12. **Pull back:** preview the curated rsync, require only expected paths, apply,
     parse/lint, and review the full diff.
-12. **Document:** update durable decisions, validation evidence, pending tests,
+13. **Document:** update durable decisions, validation evidence, pending tests,
     limitations, and rollback identity.
 
 Read [validation-matrix.md](references/validation-matrix.md) before claiming a
