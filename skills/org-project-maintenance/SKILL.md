@@ -172,7 +172,7 @@ Not started; intended work.
 Actively in progress in this session or currently owned.
 
 ### `IN-TEST`
-Implemented but still awaiting validation, especially on device/browser or with user confirmation.
+Implemented but still awaiting validation, especially on device/browser or with user acceptance test confirmation.
 
 ### `DONE`
 Implemented and validated enough for the repo's standard.
@@ -185,6 +185,11 @@ Implemented for evaluation, not yet accepted as stable product behavior.
 
 ### `BLOCKED`
 Cannot proceed without external dependency, API change, asset, or human decision.
+
+To use the above lifecycle, insert the following after the frontmatter:
+```
+#+todo: TODO STARTED IN-TEST BLOCKED | DONE DEFERRED
+```
 
 ## Backlog hygiene rules
 
