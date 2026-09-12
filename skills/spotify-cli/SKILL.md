@@ -38,7 +38,8 @@ is not covered below.
 | Pause, resume, skip, change volume | `playback pause/play/next/previous/volume` |
 | Find and immediately play a likely result | `search-and-play` |
 | Inspect candidates without playing | `search` or `search-and-play --dry-run` |
-| Select a Spotify Connect device | `devices list`, then `devices transfer` |
+| Start new content on a named Spotify Connect device | `devices list`, then pass `--device-id` to `search-and-play` or `playback play` |
+| Move existing playback to another device | `devices transfer` |
 | Inspect or add to the queue | `queue get` or `queue add` |
 | Manage playlists | `playlists ...` |
 | Manage saved tracks, albums, shows, or episodes | `library ...` |
@@ -114,8 +115,19 @@ spotify-cli --compact playback play --uri spotify:episode:...
 
 ## Devices and queue
 
+When starting new content on a named device, resolve its ID and pass it directly
+to the playback command. Do not transfer playback first:
+
 ```bash
 spotify-cli --compact devices list
+spotify-cli --compact search-and-play --type playlist --device-id DEVICE_ID "Bossa Nova"
+spotify-cli --compact playback play --device-id DEVICE_ID --context-uri spotify:playlist:...
+```
+
+Use `devices transfer` when moving existing playback without selecting new
+content:
+
+```bash
 spotify-cli --compact devices transfer DEVICE_ID --play
 spotify-cli --compact queue get
 spotify-cli --compact queue add spotify:track:...
