@@ -13,8 +13,9 @@ license: Complete terms in LICENSE.txt
 After writing or modifying a `.py` file:
 
 1. **Syntax check**: `python3 -c "import ast; ast.parse(open('FILE').read())"` or `python3 -m py_compile FILE`
-2. **Smoke run**: Execute the file or its entry point: `python3 FILE`
-3. **Run tests**: If tests exist, run them: `python3 -m pytest TEST_FILE -v`
+2. **Additional Code check**: use `ruff check` if available
+4. **Smoke run**: Execute the file or its entry point: `python3 FILE`
+4. **Run tests**: If tests exist, run them: `python3 -m pytest TEST_FILE -v`
 
 If any step fails, **fix the code and re-test before responding**. Do not present broken code and ask the user to debug it. You have shell access—use it.
 
