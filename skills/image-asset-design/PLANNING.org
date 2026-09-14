@@ -1,0 +1,252 @@
+#+title: Image Asset Design Skill and Pi Extension Plan
+#+date: 2026-09-14
+#+filetags: :ai:images:pi:skills:
+
+* Status
+
+The first local capability exists and has passed one confirmed billable request.
+The Pi extension provides a bounded, confirmation-gated =image_generate= tool
+with safe artifact output and deterministic tests; the companion =SKILL.md=
+advertises only that implemented boundary.  The initial 1K request returned and
+persisted a visible PNG in 11.3 seconds for $0.0676355.  Resumed-session
+readability and serialized-session size remain acceptance work.
+
+The planning files are temporarily colocated under
+=skills/image-asset-design/=.  Move them to an agreed cross-repository
+project-memory location when implementation gives that boundary a stable home.
+
+* 2026-09-14 — Build a narrow owned capability
+
+Add image generation as a small locally owned Pi extension plus an AIPIHKAL
+companion skill rather than installing a broad marketplace package.  Existing
+packages prove that Pi can support native image tool results, but most add
+unrelated tools, another service and credential, private API coupling,
+telemetry, or more configuration than this environment needs.
+
+The Home Assistant Temporal Resolver icon exposed the useful boundary.  Directly
+authoring its SVG produced an original, editable, reproducible final asset and
+made exact alpha, dark-mode, and small-size checks possible.  It also consumed
+substantial effort before there was anything visual to evaluate.  Generation
+should accelerate blank-canvas exploration; it should not replace deterministic
+asset construction and verification where geometry matters.
+
+* Product boundary
+
+The capability has three distinct parts.
+
+- The *Pi extension* supplies one billable =image_generate= tool.  It owns API
+  access, authentication, cancellation, bounded responses, safe file creation,
+  metadata, and native image results.
+- The *image-asset-design skill* supplies judgment.  It decides when generation
+  is appropriate, structures prompts, requires visual inspection, and directs
+  deterministic conversion and validation for the target repository.
+- Repository ownership is deliberately split: the extension/tool belongs in
+  =pi-gregoryg/DOT-pi/extensions/image-generation/=, while the reusable skill
+  belongs in =AIPIHKAL/skills/image-asset-design/=.
+- A package may eventually install both together, but packaging is not required
+  for the first local implementation.  The current planning location is not
+  necessarily the final project-memory location.
+
+Do not implement image generation as a custom conversational provider.  It is an
+auxiliary operation, not the session's reasoning model.  Do not implement it as
+a skill that shells ad hoc API requests through =bash=; that would leave secrets,
+response bounds, cancellation, and binary handling in the least suitable layer.
+
+* Current environment and provider decision
+
+Pi uses =openai-codex= as its default conversational provider and has an
+authenticated =openrouter= provider in Pi's credential registry.  No separate
+image-provider environment variable is configured.  The resulting extension is
+repo-tracked in =pi-gregoryg= and exposed through Pi's existing global extension
+directory symlink.
+
+Use OpenRouter's public dedicated Image API, =POST /api/v1/images=, for the first
+implementation.  Resolve its credential through
+=ctx.modelRegistry.getProviderAuth("openrouter")= rather than copying a token to
+an environment variable or project file.  Use the public image-model and
+endpoint discovery APIs to validate the configured model's capabilities.
+
+The live public image catalog confirmed this initial model profile on
+2026-09-14:
+
+- use =google/gemini-3.1-flash-image= for ordinary 1K concept generation;
+- keep the model fixed in a versioned extension profile rather than accepting an
+  arbitrary model in each tool call; and
+- add transparent-raster, vector, or high-quality profiles only after the single
+  model path is reliable and their costs and capability contracts are understood.
+
+Provider fallback is out of scope.  A narrow tool should fail clearly rather
+than silently changing price, style, privacy boundary, or output semantics.
+
+* Minimum viable tool
+
+** Public contract
+
+Expose one tool named =image_generate= with a deliberately small schema:
+
+- =prompt=: required bounded description of the intended image;
+- =aspect_ratio=: optional value validated against the configured model;
+- =resolution=: optional value validated against the configured model;
+- =filename=: optional safe basename, optionally ending in =.png=; and
+- =output_directory=: optional project-local directory explicitly chosen by the
+  caller.
+
+Generate exactly one image.  The first release has no per-call model selector,
+remote reference URLs, multiple images, provider fallback, or image editing.
+Those are useful extensions, not MVP requirements.
+
+When =output_directory= is omitted, save drafts outside the repository under
+Pi's user state, grouped by session.  A selected asset can then be copied or
+transformed into the repository through normal reviewed file operations.  Never
+overwrite an existing file; reserve names atomically and refuse caller-selected
+name collisions.  Automatically generated names include a unique suffix.
+
+** Billable-action policy
+
+A generation request spends money and sends user-authored content to an external
+provider.
+
+- In interactive TUI mode, show the configured model, requested dimensions, and
+  prompt summary and require confirmation before sending the request.
+- In noninteractive modes, refuse for the MVP.  Any future trusted global
+  override requires a separate permission and threat-model decision.
+- Do not treat ordinary requests to improve a web page or document as implicit
+  authorization to spend money.  The user must ask for generated imagery or
+  explicitly approve the proposal.
+- Do not retry an uncertain or timed-out generation automatically.  Report the
+  uncertainty and let the user decide whether another billable attempt is
+  justified.
+
+** Network and response safety
+
+- Apply one total deadline covering provider connection and response handling;
+  pass Pi's abort signal through all blocking work.
+- Refuse redirects and use only the configured HTTPS OpenRouter origin.
+- Bound prompt length, response bytes, decoded image bytes, image count, and
+  provider error-body capture.
+- Parse external JSON into a small internal result immediately; never place raw
+  provider payloads or base64 data in logs or textual tool output.
+- Validate media type, base64, file signature, and decoded dimensions before
+  accepting an image.
+- Return a clear failed tool result for malformed, empty, oversized, or
+  unsupported responses; report user cancellation as a non-error refusal.
+
+** Files, previews, and provenance
+
+Save the full validated artifact and a compact metadata sidecar containing the
+model, API request options, prompt, provider-reported usage/cost when available,
+creation time, dimensions, media type, and SHA-256 digest.  Keep credentials and
+raw responses out of the sidecar.
+
+Return both:
+
+- a concise textual result with absolute path, dimensions, digest, model,
+  duration, and reported cost; and
+- a bounded native Pi image attachment suitable for terminal preview and model
+  inspection.
+
+If the full image is unnecessarily large for conversational context, create a
+smaller preview while preserving the full artifact on disk.  Record clearly
+which digest and dimensions belong to which file.  Session-size behavior is an
+acceptance concern, not an afterthought.
+
+* Skill workflow
+
+The eventual =SKILL.md= should remain concise and teach the following sequence.
+
+1. Classify the asset.  Use image generation for concept art, illustrations,
+   textures, backgrounds, photos, and mockups.  Prefer repository-native SVG,
+   CSS, canvas, or diagram formats for exact icons, logos, schematics, and UI
+   geometry.
+2. Inspect existing project style and target constraints before generating.
+3. Structure the prompt around intended use, subject, composition, palette,
+   rendering style, framing, and explicit exclusions.  Quote required text
+   exactly, while treating text rendering as unverified until inspected.
+4. Generate a small number of deliberate concepts, not an undirected slot
+   machine marathon.
+5. Inspect every result with available vision support.  Make one targeted change
+   per iteration and preserve successful invariants.
+6. Promote the selected concept through deterministic cropping, scaling,
+   transparency handling, format conversion, and target-specific checks.
+7. Preserve editable sources and generation metadata when they matter.  Never
+   claim dimensions, transparency, typography, or small-size legibility without
+   checking them.
+
+For an asset like the Temporal Resolver icon, generate concepts and select a
+composition first.  If exact icon geometry is needed, redraw only the accepted
+motifs as controlled SVG primitives rather than tracing the generated pixels,
+then perform exact light/dark, alpha, dimension, and small-render validation.
+
+* Third-party reconnaissance
+
+The following packages are references, not dependencies.
+
+- [[https://pi.dev/packages/@amaster.ai/pi-image-gen?name=image][=@amaster.ai/pi-image-gen=]] has the closest product boundary: a dedicated
+  multi-provider tool, safe non-overwriting output, reference editing, and a
+  bundled skill.  Its built-in OpenRouter path resolves credentials from settings
+  or =OPENROUTER_API_KEY= rather than Pi's existing provider auth.
+- [[https://pi.dev/packages/pi-codex-image-gen?name=image][=pi-codex-image-gen=]] reuses =openai-codex= authentication and has useful
+  response and reference bounds, but couples the capability to the private Codex
+  image route and includes an install-telemetry dependency.
+- [[https://pi.dev/packages/@dtmirizzi/pi-openrouter-multimodal?name=image][=@dtmirizzi/pi-openrouter-multimodal=]] resolves Pi's OpenRouter credential,
+  but adds eight tools, currently gates image generation on the active chat model
+  also being OpenRouter, and uses the chat-completions image path rather than the
+  dedicated Image API.
+- RunComfy-oriented skills require another service and credential without
+  improving the desired local boundary.
+
+Audit useful implementation patterns, tests, and failure handling from these
+projects, but do not copy their broad scope or assume their contracts are safe.
+
+* 2026-09-14 — Keep consent and output intent explicit
+
+The initial confirmation is extension policy, not a Pi framework requirement.
+If repeated use makes per-call confirmation too interruptive, prefer an explicit
+one-shot command such as =/image-approve-next= over a permanent spending switch.
+A safe grant is memory-only, expires quickly, authorizes one fixed-model request
+at no more than 1K, and is consumed atomically before dispatch.  Never treat a
+model-controlled =approved= argument as human authorization.
+
+Transparency is an output requirement, not a universal quality measure.  Future
+model expansion should use a few explicit profiles rather than expose the whole
+provider catalog:
+
+- =concept= uses a fast general raster model and permits an opaque background;
+- =transparent-raster= selects an endpoint that explicitly supports transparent
+  PNG output and mechanically verifies real non-opaque pixels; and
+- =vector= selects an SVG-capable model, then sanitizes and inspects its output.
+
+Do not remove backgrounds merely to force every generated image through an icon
+workflow.  Do not autotrace raster pixels into SVG.  When deterministic
+reconstruction is appropriate, use a generated image as art direction and redraw
+only the accepted composition and motifs from controlled primitives.
+
+* Deferred capability
+
+Keep these out of the first implementation:
+
+- image-to-image editing and local reference files;
+- public URL references and the resulting SSRF/redirect surface;
+- multiple outputs per request;
+- automatic model selection or fallback;
+- transparent-background and vector-generation profiles;
+- streaming partial previews;
+- local ComfyUI or GPU backends;
+- automatic tracing of raster images to SVG;
+- gallery/history UI beyond ordinary Pi tool rendering; and
+- publication, upload, or deployment of generated assets.
+
+* Remaining design decisions
+
+- Choose the long-term home for cross-repository planning after the extension
+  and skill exist; do not duplicate full plans in both repositories.
+- Confirm whether draft files belong under =~/.pi/agent/generated-images/= or a
+  separate XDG state/data directory.
+- Set concrete prompt, response, decoded-image, preview, and total-deadline
+  limits from measured API behavior.
+- Decide whether prompt provenance is always written to the sidecar or can be
+  disabled globally for sensitive work.
+- Determine the smallest reliable inline-preview representation across the Pi
+  TUI, print mode, and session resume.
+- Decide whether accepted model profiles need global configuration or can remain
+  a small versioned allowlist in the extension.
