@@ -27,24 +27,61 @@ Use compact JSON for agent work:
 spotify-cli --compact COMMAND
 ```
 
-Inspect `spotify-cli COMMAND --help` rather than guessing an option when a workflow
-is not covered below.
+## Fast paths: playback requests
+
+Assume `spotify-cli` is installed, authenticated and available on PATH.
+
+For ordinary playback actions, execute the known command directly. Do **not** call
+`--help`, `devices list`, `playback current`, or search separately unless the
+request is ambiguous or the command fails.
+
+### Known device aliases
+
+| Name           | Device ID                                  |
+|----------------|--------------------------------------------|
+| excession      | 008afef11e0d804b86c7e72974015f06013a7158 |
+| Rozi Office    | 3c9a855de1f6f7087a144d9d4dd2a66f16673723 |
+| Pancho + Lefty | d8af1fb21efb27793b55b31d2b3e4c74e113f796 |
+| Music Room     | 928bd169ef769ef083ee9dbcab2c4e28a5c7e528 |
+| Kitchen        | f02e9b67c561fd4ba27baede3ac0d669e3605652 |
+
+### Direct patterns
+
+Play an artist on a named device:
+
+```bash
+spotify-cli --compact search-and-play --type artist \
+  --device-id DEVICE_ID "ARTIST"
+```
+
+Move current playback to a named device and keep it playing:
+
+```bash
+spotify-cli --compact devices transfer DEVICE_ID --play
+```
+
+For these patterns, use the device ID from the alias table directly. Fall back to
+`devices list` only when the requested name is absent from the table or transfer
+fails.
+
+
+For a documented fast path, run it directly. Inspect =spotify-cli COMMAND --help= only when the needed syntax is not documented, an option is uncertain, or the direct command fails.
 
 ## Choose the shortest path
 
-| User intent | Command |
-|---|---|
-| What is playing? | `playback current` |
-| Pause, resume, skip, change volume | `playback pause/play/next/previous/volume` |
-| Find and immediately play a likely result | `search-and-play` |
-| Inspect candidates without playing | `search` or `search-and-play --dry-run` |
+| User intent                                         | Command                                                                         |
+|-----------------------------------------------------|---------------------------------------------------------------------------------|
+| What is playing?                                    | `playback current`                                                              |
+| Pause, resume, skip, change volume                  | `playback pause/play/next/previous/volume`                                      |
+| Find and immediately play a likely result           | `search-and-play`                                                               |
+| Inspect candidates without playing                  | `search` or `search-and-play --dry-run`                                         |
 | Start new content on a named Spotify Connect device | `devices list`, then pass `--device-id` to `search-and-play` or `playback play` |
-| Move existing playback to another device | `devices transfer` |
-| Inspect or add to the queue | `queue get` or `queue add` |
-| Manage playlists | `playlists ...` |
-| Manage saved tracks, albums, shows, or episodes | `library ...` |
-| Manage followed artists | `artists list-followed/follow/unfollow` |
-| Inspect a podcast | `search --type show`, then `shows episodes` |
+| Move existing playback to another device            | `devices transfer`                                                              |
+| Inspect or add to the queue                         | `queue get` or `queue add`                                                      |
+| Manage playlists                                    | `playlists ...`                                                                 |
+| Manage saved tracks, albums, shows, or episodes     | `library ...`                                                                   |
+| Manage followed artists                             | `artists list-followed/follow/unfollow`                                         |
+| Inspect a podcast                                   | `search --type show`, then `shows episodes`                                     |
 
 ## Authentication
 
