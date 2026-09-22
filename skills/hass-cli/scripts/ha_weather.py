@@ -20,14 +20,15 @@ import os
 import sys
 from collections import defaultdict
 from datetime import datetime
+from typing import Any
 
 try:
     import websockets
 except ImportError:
     websockets = None
 
-HASS_SERVER   = os.environ.get("HASS_SERVER", "")
-HASS_TOKEN    = os.environ.get("HASS_TOKEN", "")
+HASS_SERVER = os.environ.get("HASS_SERVER", "")
+HASS_TOKEN = os.environ.get("HASS_TOKEN", "")
 WEATHER_ENTITY = os.environ.get("HA_WEATHER_ENTITY", "")
 COMMAND_TIMEOUT = float(os.environ.get("HA_COMMAND_TIMEOUT", "30"))
 
@@ -45,6 +46,28 @@ def ws_url() -> str:
     return HASS_SERVER.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
 
 
+async def receive_json(ws: Any, context: str) -> dict[str, Any]:
+    """Receive one bounded WebSocket JSON message."""
+    try:
+        raw = await asyncio.wait_for(ws.recv(), timeout=COMMAND_TIMEOUT)
+    except TimeoutError as exc:
+        raise RuntimeError(
+            f"Timed out after {COMMAND_TIMEOUT:g} seconds waiting for {context}"
+        ) from exc
+    return json.loads(raw)
+
+
+async def authenticate(ws: Any) -> None:
+    """Complete and validate the Home Assistant WebSocket handshake."""
+    auth_required = await receive_json(ws, "authentication challenge")
+    if auth_required.get("type") != "auth_required":
+        raise RuntimeError("Expected Home Assistant authentication challenge")
+    await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
+    auth = await receive_json(ws, "authentication response")
+    if auth.get("type") != "auth_ok":
+        raise RuntimeError("Home Assistant authentication failed")
+
+
 async def resolve_weather_entity() -> str:
     """Use the configured entity or discover the only available weather entity."""
     if websockets is None:
@@ -55,13 +78,9 @@ async def resolve_weather_entity() -> str:
     async with websockets.connect(
         ws_url(), open_timeout=COMMAND_TIMEOUT, close_timeout=COMMAND_TIMEOUT
     ) as ws:
-        await ws.recv()
-        await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
-        auth = json.loads(await ws.recv())
-        if auth.get("type") != "auth_ok":
-            raise RuntimeError("Home Assistant authentication failed")
+        await authenticate(ws)
         await ws.send(json.dumps({"id": 1, "type": "get_states"}))
-        msg = json.loads(await ws.recv())
+        msg = await receive_json(ws, "weather entity discovery")
 
     entities = sorted(
         state["entity_id"]
@@ -82,9 +101,7 @@ async def get_forecast(forecast_type: str, weather_entity: str) -> list[dict]:
     async with websockets.connect(
         ws_url(), open_timeout=COMMAND_TIMEOUT, close_timeout=COMMAND_TIMEOUT
     ) as ws:
-        await ws.recv()
-        await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
-        assert json.loads(await ws.recv())["type"] == "auth_ok"
+        await authenticate(ws)
 
         await ws.send(json.dumps({
             "id": 1,
@@ -96,7 +113,7 @@ async def get_forecast(forecast_type: str, weather_entity: str) -> list[dict]:
             "return_response": True,
         }))
         while True:
-            msg = json.loads(await ws.recv())
+            msg = await receive_json(ws, "weather forecast")
             if msg.get("id") == 1:
                 break
 
@@ -110,13 +127,11 @@ async def current_conditions(weather_entity: str) -> dict:
     async with websockets.connect(
         ws_url(), open_timeout=COMMAND_TIMEOUT, close_timeout=COMMAND_TIMEOUT
     ) as ws:
-        await ws.recv()
-        await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
-        assert json.loads(await ws.recv())["type"] == "auth_ok"
+        await authenticate(ws)
 
         await ws.send(json.dumps({"id": 1, "type": "get_states"}))
         while True:
-            msg = json.loads(await ws.recv())
+            msg = await receive_json(ws, "current weather conditions")
             if msg.get("id") == 1:
                 break
 
@@ -220,7 +235,7 @@ async def run(args: argparse.Namespace) -> int:
                 "current": current,
                 "forecast_type": ftype,
                 "forecast": forecasts,
-            }, indent=2))
+            }, separators=(",", ":")))
             return 0
 
         # Header: current conditions
@@ -256,8 +271,11 @@ async def run(args: argparse.Namespace) -> int:
 
         return 0
 
-    except Exception as exc:
-        print(json.dumps({"status": "infrastructure_error", "message": str(exc)}))
+    except Exception as exc:  # noqa: BLE001 - normalize dependency and transport failures
+        print(json.dumps(
+            {"status": "infrastructure_error", "message": str(exc)},
+            separators=(",", ":"),
+        ))
         return 3
 
 

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
-from pathlib import Path
 import unittest
-
+from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "ha_weather.py"
 SPEC = importlib.util.spec_from_file_location("ha_weather", SCRIPT)
@@ -28,6 +29,20 @@ class WeatherFormattingTests(unittest.TestCase):
         )
         self.assertIn("21°C", output)
         self.assertNotIn("°F", output)
+
+
+class WeatherTimeoutTests(unittest.IsolatedAsyncioTestCase):
+    async def test_receive_is_bounded(self) -> None:
+        class SlowWebSocket:
+            async def recv(self) -> str:
+                await asyncio.sleep(1)
+                return "{}"
+
+        with (
+            patch.object(ha_weather, "COMMAND_TIMEOUT", 0.001),
+            self.assertRaisesRegex(RuntimeError, "waiting for weather forecast"),
+        ):
+            await ha_weather.receive_json(SlowWebSocket(), "weather forecast")
 
 
 if __name__ == "__main__":

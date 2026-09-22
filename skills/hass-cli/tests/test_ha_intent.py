@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
-from pathlib import Path
 import unittest
-
+from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "ha_intent.py"
 SPEC = importlib.util.spec_from_file_location("ha_intent", SCRIPT)
@@ -53,6 +54,25 @@ class IntentInterpretationTests(unittest.TestCase):
             },
         )
         self.assertEqual((output["status"], code), ("ok", 0))
+        self.assertNotIn("raw", output)
+
+    def test_debug_output_includes_raw_response(self) -> None:
+        output, code = ha_intent.interpret(
+            "good night",
+            {
+                "success": True,
+                "result": {
+                    "response": {
+                        "response_type": "action_done",
+                        "speech": {"plain": {"speech": "Done"}},
+                        "data": {"success": [], "failed": []},
+                    }
+                },
+            },
+            include_raw=True,
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("raw", output)
 
     def test_unknown_response_type_stops_fallback(self) -> None:
         output, code = ha_intent.interpret(
@@ -69,6 +89,20 @@ class IntentInterpretationTests(unittest.TestCase):
             },
         )
         self.assertEqual((output["status"], code), ("error", 2))
+
+
+class IntentTimeoutTests(unittest.IsolatedAsyncioTestCase):
+    async def test_receive_is_bounded(self) -> None:
+        class SlowWebSocket:
+            async def recv(self) -> str:
+                await asyncio.sleep(1)
+                return "{}"
+
+        with (
+            patch.object(ha_intent, "COMMAND_TIMEOUT", 0.001),
+            self.assertRaisesRegex(RuntimeError, "waiting for intent response"),
+        ):
+            await ha_intent.receive_json(SlowWebSocket(), "intent response")
 
 
 if __name__ == "__main__":

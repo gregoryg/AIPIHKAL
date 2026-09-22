@@ -5,86 +5,85 @@ description: Control and query Home Assistant through small JSON-first wrappers 
 
 # Home Assistant CLI
 
-Use the wrappers in `scripts/` before raw `hass-cli`. They join Home Assistant's
-area, device, entity, and state data and return compact JSON.
+## Operational fast path
 
-## Why the wrappers exist
+Assume this installed skill is configured and operational. `hass-cli`, Python,
+server configuration, authentication, and WebSocket dependencies are already set
+up. The wrappers load their environment automatically.
 
-Humans usually ask to act on an entity in a room, but Home Assistant does not
-expose that relationship as one consistently useful lookup. An entity may have no
-`area_id` even though its parent device is assigned to an area. Raw discovery can
-therefore require an area -> device -> entity -> state join before an action can
-be chosen safely.
+For a documented routine request, execute the matching wrapper immediately. Do
+**not** first run `command -v`, `--help`, authentication checks, service or device
+listings, PATH checks, repository searches, script inspection, or a status query
+before an action. Diagnose installation only after the direct command reports an
+infrastructure failure or when the human explicitly asks for setup help.
 
-The wrappers perform that join on every inventory load. They resolve an entity's
-area from the entity assignment first, then fall back to its device assignment.
-Do not replace this with an entity-only query: that recreates the wheel-spinning
-and missed devices this skill is designed to prevent.
+The wrappers are not required to be on `PATH`. Invoke them from this skill's
+`scripts/` directory; use the skill's known absolute base path when the current
+working directory is elsewhere. Do not `cd` or source `ha-env.sh` first.
 
-## Before acting
+## Choose one command
 
-1. If a home-specific companion skill is available, read it first. It owns aliases,
-   preferred entities, known intent phrases, and topology exceptions.
-2. Prefer an exact mapping from that companion over fuzzy discovery.
-3. Never invent an entity id or assume a room name maps to one device.
-4. Treat `ambiguous` as a stop condition. Ask or retry with an exact `entity_id`.
+| User intent | First and normally only command |
+|---|---|
+| Is something on, off, open, or closed? | `scripts/ha-status "QUERY"` |
+| Turn on or open one resolved target | `scripts/ha-on "QUERY"` |
+| Turn off or close one resolved target | `scripts/ha-off "QUERY"` |
+| Activate a scene, script, or automation | `scripts/ha-trigger "QUERY"` |
+| List controllable things in an area | `scripts/ha-area-summary "AREA"` |
+| Find or identify an unfamiliar target | `scripts/ha-find "QUERY"` |
+| Run a reviewed local HA intent phrase | `scripts/ha-intent "PHRASE"` |
+| Ask for an HA weather forecast | `scripts/ha-weather [OPTIONS]` |
 
-See `references/home-companion.md` when creating a home-specific companion.
+Action wrappers resolve, reject ambiguity, perform the service call, and confirm
+physical state where possible. They do not need a separate discovery or status
+preflight.
 
-## Configuration
+## Home companions
 
-The wrappers require `hass-cli`, Python 3.10+, `HASS_SERVER`, and `HASS_TOKEN`.
-WebSocket-backed helpers also require the Python package `websockets`.
+A home companion owns reviewed aliases, preferred aggregate entities, known
+intent phrases, and topology exceptions. If Pi's available-skills metadata names
+a companion for the active home, load that exact skill directly. Never search the
+filesystem for `*home*` or `*companion*` files.
 
-```bash
-cp skills/hass-cli/.env.template skills/hass-cli/.env
-$EDITOR skills/hass-cli/.env
-skills/hass-cli/scripts/ha-find "kitchen"
-```
+Prefer a companion's exact mapping over fuzzy discovery. If no matching companion
+is advertised or loaded, proceed with the generic wrapper; do not delay a routine
+request merely to hunt for private context. See
+[home-companion.md](references/home-companion.md) only when creating or maintaining
+a companion.
 
-Wrappers preserve already-exported variables, then fill missing values from the
-skill-local `.env`. Set `HASS_CLI_BIN` or `HA_PYTHON` only when the defaults are
-not on `PATH`. See `references/setup.md` for installation and troubleshooting.
+## Why the resolver exists
 
-## Choose one wrapper
+Home Assistant may assign an area to a parent device but not its entities. Human
+room requests can therefore require an area -> device -> entity -> state join.
+The resolver performs that join and keeps exact entity identity stronger than
+area or device context. Do not replace fuzzy room resolution with an entity-only
+registry query.
 
-| User intent                                       | First command                    |
-|---------------------------------------------------|----------------------------------|
-| Find or identify something                        | `scripts/ha-find "QUERY"`        |
-| List controllable things in an area               | `scripts/ha-area-summary "AREA"` |
-| Ask whether something is on, off, open, or closed | `scripts/ha-status "QUERY"`      |
-| Turn on or open one resolved entity               | `scripts/ha-on "QUERY"`          |
-| Turn off or close one resolved entity             | `scripts/ha-off "QUERY"`         |
-| Activate a scene, script, or automation           | `scripts/ha-trigger "QUERY"`     |
-| Run a phrase through HA's built-in local agent    | `scripts/ha-intent "PHRASE"`     |
-| Ask for a Home Assistant weather forecast         | `scripts/ha-weather [OPTIONS]`   |
+An exact `domain.object_id` bypasses the full join when safe. Companion mappings
+should therefore pass exact entity ids directly.
 
-Paths above are relative to this skill directory. When the execution environment
-does not preserve a working directory, use the actual absolute path to the skill.
-Do not assume a particular user home, virtualenv, repository layout, or agent host.
+## Interpret output
 
-## Interpret wrapper output
+Wrappers return compact JSON and one of these statuses:
 
-All wrappers use these statuses:
-
-- `ok`: the request completed. For physical devices, also inspect
-  `state_confirmed`; delayed devices may need a later status check.
-- `no_match`: nothing safe matched. Discover with `ha-find` or use a companion
-  mapping; do not guess.
-- `ambiguous`: multiple top candidates matched and no action occurred. Ask or
-  retry with an exact `entity_id`.
+- `ok`: the request completed. For physical devices, inspect `state_confirmed`.
+- `no_match`: no safe target matched. Use `ha-find` only now, or ask the human;
+  never invent an entity id.
+- `ambiguous`: multiple top candidates matched and no action occurred. Ask, or
+  retry with an exact reviewed `entity_id`.
 - `error` or `infrastructure_error`: configuration, authentication, transport,
-  dependency, or Home Assistant failed. Do not convert this into another action.
+  dependency, or Home Assistant failed. Stop rather than converting the failure
+  into another action.
 
 Exit codes are `0` for success, `1` for no match, `2` for ambiguity or a rejected
 HA response, and `3` for infrastructure failure.
 
 ## Control rules
 
-`ha-on` and `ha-off` act only on `light`, `switch`, and `cover` entities. For a
-cover, on means open and off means close. They act automatically only when the
-top match is unique. Use `--all` only when the human explicitly requested every
-top-scoring match.
+`ha-on` and `ha-off` act only on `light`, `switch`, and `cover`. For a cover, on
+means open and off means close. They act automatically only when the top match is
+unique. Use `--all` only when the human explicitly requested every top-scoring
+match.
 
 `ha-trigger` follows the same ambiguity rule and maps:
 
@@ -92,53 +91,51 @@ top-scoring match.
 - `script` to `script.turn_on`
 - `automation` to `automation.trigger`
 
-Physical covers can outlast the wrapper's confirmation window. If a command was
-accepted but `state_confirmed` is false, wait and run `ha-status`; do not
-immediately resend a command to a moving door or blind.
+Physical covers can outlast the confirmation window. If a command was accepted
+but `state_confirmed` is false, wait and run `ha-status`; do not immediately
+resend a command to a moving door or blind.
 
 ## Intent routing
 
 Use `ha-intent` only for a phrase documented by the home companion or explicitly
-requested by the user. It targets Home Assistant's built-in
+requested by the human. It targets Home Assistant's built-in
 `conversation.home_assistant` agent, not an arbitrary conversational LLM or the
-selected Assist pipeline. It tests local NLU and custom sentence behavior; an
-LLM-backed production pipeline may route the same text differently.
+selected Assist pipeline.
 
 - `ok`: stop; the intent matched.
 - `no_match`: a direct wrapper may be used if the requested action is clear.
-- `error` or `infrastructure_error`: stop; do not fall back, because HA may have
-  partially processed the request.
+- `error` or `infrastructure_error`: stop, because HA may have partially processed
+  the request.
 
-Without home-specific doctrine, prefer deterministic discovery and direct control
-over trying speculative natural-language phrases.
+Without home-specific doctrine, prefer deterministic direct control over
+speculative natural-language phrases. Add `--debug` only when raw HA intent data
+is genuinely needed.
 
 ## Other domains
 
 Use `ha-find --include-all-domains "QUERY"` to resolve sensors, climate entities,
-media players, vacuums, timers, and other domains. Then use an exact entity id in
-a raw `hass-cli service call`. Read only the relevant reference:
+media players, vacuums, timers, and other domains. Then use the exact entity id
+in a raw service call. Read only the relevant reference:
 
-- Common service syntax: `references/services.md`
-- HA media-player status and transport: `references/media.md`
-- Helper-backed schedules: `references/scheduling.md`
-- Setup and dependency failures: `references/setup.md`
+- Common service syntax: [services.md](references/services.md)
+- Media-player status and transport: [media.md](references/media.md)
+- Helper-backed schedules: [scheduling.md](references/scheduling.md)
+- Installation failures: [setup.md](references/setup.md)
 
-For Spotify catalog search, library management, playlist curation, or podcast
-metadata, use the standalone `spotify-cli` skill. Home Assistant remains useful
-for inspecting and controlling the resulting playback on known `media_player`
-entities.
+For Spotify catalog search, library management, playlist curation, podcasts, or
+Spotify Connect playback, use the standalone `spotify-cli` skill.
 
 ## Raw fallback
 
-Load the same environment before calling raw `hass-cli`:
+Use raw `hass-cli` only for unsupported domains or debugging after a wrapper
+cannot express the operation. Load the same environment once:
 
 ```bash
-source skills/hass-cli/scripts/ha-env.sh
+source scripts/ha-env.sh
 hass-cli -o json state list 'sensor.*'
-hass-cli -o json service list
 hass-cli service call climate.set_temperature \
   --arguments entity_id=climate.downstairs,temperature=70
 ```
 
-Prefer JSON output. Use raw registry or service calls for unsupported domains and
-debugging, not as the first discovery path.
+Prefer JSON. Do not list every service or registry merely to rediscover syntax
+already documented in the relevant reference.

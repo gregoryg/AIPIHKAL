@@ -16,14 +16,15 @@ Exit codes:
   2  HA returned an error response (see 'error_code' in JSON output)
   3  infrastructure error (auth failure, connection problem, etc.)
 
-The JSON output always contains:
+The compact JSON output contains:
   status          "ok" | "no_match" | "error" | "infrastructure_error"
   phrase          the phrase that was sent
   response_type   the HA response_type string (action_done, error, etc.)
   speech          what HA said back
   success         list of entities HA reports as acted on (may be empty for automations)
   failed          list of entities HA reports as failed
-  raw             full HA response payload (for debugging)
+
+Pass --debug to include the full raw Home Assistant response payload.
 """
 
 from __future__ import annotations
@@ -66,6 +67,17 @@ def ws_url() -> str:
     return HASS_SERVER.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
 
 
+async def receive_json(ws: Any, context: str) -> dict[str, Any]:
+    """Receive one bounded WebSocket JSON message."""
+    try:
+        raw = await asyncio.wait_for(ws.recv(), timeout=COMMAND_TIMEOUT)
+    except TimeoutError as exc:
+        raise RuntimeError(
+            f"Timed out after {COMMAND_TIMEOUT:g} seconds waiting for {context}"
+        ) from exc
+    return json.loads(raw)
+
+
 async def process_intent(phrase: str) -> dict[str, Any]:
     """Send phrase through HA intent pipeline and return structured result."""
     if websockets is None:
@@ -78,11 +90,11 @@ async def process_intent(phrase: str) -> dict[str, Any]:
         open_timeout=COMMAND_TIMEOUT,
         close_timeout=COMMAND_TIMEOUT,
     ) as ws:
-        raw = await ws.recv()
-        if json.loads(raw).get("type") != "auth_required":
+        auth_required = await receive_json(ws, "authentication challenge")
+        if auth_required.get("type") != "auth_required":
             raise RuntimeError("Expected auth_required")
         await ws.send(json.dumps({"type": "auth", "access_token": HASS_TOKEN}))
-        auth = json.loads(await ws.recv())
+        auth = await receive_json(ws, "authentication response")
         if auth.get("type") != "auth_ok":
             raise RuntimeError(f"Auth failed: {auth}")
 
@@ -93,17 +105,17 @@ async def process_intent(phrase: str) -> dict[str, Any]:
             "agent_id": HA_CONVERSATION_AGENT,
         }))
 
-        # Drain until we get our response
+        # Drain until we get our response.
         while True:
-            msg = json.loads(await ws.recv())
+            msg = await receive_json(ws, "intent response")
             if msg.get("id") == 1:
                 break
 
     return msg
 
 
-def interpret(phrase: str, msg: dict[str, Any]) -> tuple[dict[str, Any], int]:
-    """Turn the raw WS result into a clean output dict and an exit code."""
+def _interpret_with_raw(phrase: str, msg: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    """Turn the raw WS result into output that still includes debug data."""
     if not msg.get("success"):
         err = msg.get("error", {})
         code = err.get("code", "unknown")
@@ -191,32 +203,52 @@ def interpret(phrase: str, msg: dict[str, Any]) -> tuple[dict[str, Any], int]:
     }, 2
 
 
-async def main_async(phrase: str) -> int:
+def interpret(
+    phrase: str,
+    msg: dict[str, Any],
+    *,
+    include_raw: bool = False,
+) -> tuple[dict[str, Any], int]:
+    """Return a bounded result, retaining the raw response only on request."""
+    output, code = _interpret_with_raw(phrase, msg)
+    if not include_raw:
+        output.pop("raw", None)
+    return output, code
+
+
+async def main_async(phrase: str, *, debug: bool = False) -> int:
     try:
         msg = await process_intent(phrase)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - normalize dependency and transport failures
         print(json.dumps({
             "status": "infrastructure_error",
             "phrase": phrase,
             "message": str(exc),
-        }, indent=2))
+        }, separators=(",", ":")))
         return 3
 
-    output, code = interpret(phrase, msg)
-    print(json.dumps(output, indent=2))
+    output, code = interpret(phrase, msg, include_raw=debug)
+    print(json.dumps(output, separators=(",", ":")))
     return code
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("phrase", help="Natural language phrase to send to HA's intent engine")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Include the raw Home Assistant response payload",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
-    return asyncio.run(main_async(args.phrase))
+    return asyncio.run(main_async(args.phrase, debug=args.debug))
 
 
 if __name__ == "__main__":

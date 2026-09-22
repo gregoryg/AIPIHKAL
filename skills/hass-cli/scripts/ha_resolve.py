@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 DEFAULT_HASS_CLI = os.environ.get("HASS_CLI_BIN", "hass-cli")
@@ -86,6 +87,40 @@ def domain_for(entity_id: str) -> str:
     return entity_id.split(".", 1)[0]
 
 
+def is_exact_entity_id(query: str) -> bool:
+    """Return whether query has Home Assistant's domain.object_id shape."""
+    return re.fullmatch(r"[a-z0-9_]+\.[a-z0-9_]+", query) is not None
+
+
+def load_exact_entity(
+    entity_id: str,
+    *,
+    allowed_domains: set[str],
+) -> dict[str, Any] | None:
+    """Load one exact entity without fetching every Home Assistant registry."""
+    if not is_exact_entity_id(entity_id) or domain_for(entity_id) not in allowed_domains:
+        return None
+
+    states = run_hass_json(["state", "list", entity_id])
+    state = next(
+        (record for record in states if record.get("entity_id") == entity_id),
+        None,
+    )
+    if state is None:
+        return None
+
+    attributes = state.get("attributes", {})
+    return {
+        "score": 240,
+        "label": attributes.get("friendly_name") or entity_id,
+        "entity_id": entity_id,
+        "kind": domain_for(entity_id),
+        "state": state.get("state"),
+        "area": None,
+        "device": None,
+    }
+
+
 def score_text(query: str, *values: str | None) -> int:
     """Return a crude but useful fuzzy-match score."""
     query_norm = normalize(query)
@@ -159,10 +194,24 @@ class Inventory:
     """Joined view of Home Assistant areas, devices, entities, and states."""
 
     def __init__(self) -> None:
-        self.areas = run_hass_json(["area", "list"])
-        self.devices = run_hass_json(["device", "list"])
-        self.entities = run_hass_json(["entity", "list"])
-        self.states = run_hass_json(["state", "list"])
+        commands = {
+            "areas": ["area", "list"],
+            "devices": ["device", "list"],
+            "entities": ["entity", "list"],
+            "states": ["state", "list"],
+        }
+        with ThreadPoolExecutor(
+            max_workers=len(commands),
+            thread_name_prefix="ha-inventory",
+        ) as executor:
+            futures = {
+                name: executor.submit(run_hass_json, command)
+                for name, command in commands.items()
+            }
+            self.areas = futures["areas"].result()
+            self.devices = futures["devices"].result()
+            self.entities = futures["entities"].result()
+            self.states = futures["states"].result()
 
         self.area_by_id = {area["area_id"]: area for area in self.areas}
         self.area_name_by_id = {area["area_id"]: area["name"] for area in self.areas}
@@ -325,8 +374,8 @@ def trigger_service_for(domain: str) -> str:
 
 
 def print_json(payload: dict[str, Any]) -> None:
-    """Print JSON payload consistently."""
-    print(json.dumps(payload, indent=2, sort_keys=False))
+    """Print compact JSON for low-overhead agent consumption."""
+    print(json.dumps(payload, separators=(",", ":"), sort_keys=False))
 
 
 def trim(items: Iterable[Any], limit: int) -> list[Any]:
@@ -405,15 +454,16 @@ def command_find(args: argparse.Namespace) -> int:
         inventory.entity_candidates(args.query, controllable_only=not args.include_all_domains),
         args.limit,
     )
+    status = "ok" if area_matches or entity_matches else "no_match"
     print_json(
         {
-            "status": "ok",
+            "status": status,
             "query": args.query,
             "area_matches": area_matches,
             "best_matches": entity_matches,
         }
     )
-    return 0
+    return 0 if status == "ok" else 1
 
 
 def command_area_summary(args: argparse.Namespace) -> int:
@@ -437,8 +487,14 @@ def command_area_summary(args: argparse.Namespace) -> int:
 
 def command_action(args: argparse.Namespace, action: str) -> int:
     """Resolve a query and control the selected entity if unambiguous."""
-    inventory = Inventory()
-    matches = inventory.resolve_for_action(args.query)
+    if is_exact_entity_id(args.query):
+        exact = load_exact_entity(
+            args.query,
+            allowed_domains=DEFAULT_CONTROLLABLE_DOMAINS,
+        )
+        matches = [exact] if exact is not None else []
+    else:
+        matches = Inventory().resolve_for_action(args.query)
     if not matches:
         print_json({"status": "no_match", "query": args.query, "best_matches": []})
         return 1
@@ -486,40 +542,56 @@ def command_action(args: argparse.Namespace, action: str) -> int:
 
 def command_status(args: argparse.Namespace) -> int:
     """Show compact status for matching areas and actionable entities."""
-    inventory = Inventory()
-    raw_area_matches = trim(inventory.area_candidates(args.query), args.limit)
-    entity_matches = trim(
-        (
-            match
-            for match in inventory.entity_candidates(args.query, controllable_only=True)
-            if match["kind"] in DEFAULT_CONTROLLABLE_DOMAINS
-        ),
-        args.limit,
-    )
-    raw_area_matches = relevant_area_matches(raw_area_matches, entity_matches)
-    area_matches = [
-        compact_area_match(
-            match,
-            entity_limit=args.limit,
-            domains=DEFAULT_CONTROLLABLE_DOMAINS,
+    if is_exact_entity_id(args.query):
+        exact = load_exact_entity(
+            args.query,
+            allowed_domains=DEFAULT_CONTROLLABLE_DOMAINS,
         )
-        for match in raw_area_matches
-    ]
+        entity_matches = [exact] if exact is not None else []
+        area_matches: list[dict[str, Any]] = []
+    else:
+        inventory = Inventory()
+        raw_area_matches = trim(inventory.area_candidates(args.query), args.limit)
+        entity_matches = trim(
+            (
+                match
+                for match in inventory.entity_candidates(args.query, controllable_only=True)
+                if match["kind"] in DEFAULT_CONTROLLABLE_DOMAINS
+            ),
+            args.limit,
+        )
+        raw_area_matches = relevant_area_matches(raw_area_matches, entity_matches)
+        area_matches = [
+            compact_area_match(
+                match,
+                entity_limit=args.limit,
+                domains=DEFAULT_CONTROLLABLE_DOMAINS,
+            )
+            for match in raw_area_matches
+        ]
+
+    status = "ok" if area_matches or entity_matches else "no_match"
     print_json(
         {
-            "status": "ok",
+            "status": status,
             "query": args.query,
             "area_matches": area_matches,
             "best_matches": entity_matches,
         }
     )
-    return 0
+    return 0 if status == "ok" else 1
 
 
 def command_trigger(args: argparse.Namespace) -> int:
     """Resolve a query and trigger a scene, script, or automation."""
-    inventory = Inventory()
-    matches = inventory.resolve_for_trigger(args.query)
+    if is_exact_entity_id(args.query):
+        exact = load_exact_entity(
+            args.query,
+            allowed_domains=DEFAULT_TRIGGERABLE_DOMAINS,
+        )
+        matches = [exact] if exact is not None else []
+    else:
+        matches = Inventory().resolve_for_trigger(args.query)
     if not matches:
         print_json({"status": "no_match", "query": args.query, "best_matches": []})
         return 1

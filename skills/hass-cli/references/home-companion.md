@@ -5,9 +5,15 @@ registries cannot: human aliases, preferred room aggregates, known intent phrase
 and unusual device topology. It must not contain tokens, passwords, door codes,
 Wi-Fi credentials, or other secrets.
 
+Install each companion as its own discoverable skill directory with frontmatter
+at the beginning of `SKILL.md`, for example `skills/juniper-house/SKILL.md`. Do
+not hide it as an extra `*-home.md` file inside the generic skill: models then
+search for it unreliably or fail to load it at all.
+
 Load the generic `hass-cli` skill and exactly one companion for the active home.
 The companion overrides generic routing only where it gives an explicit reviewed
-mapping.
+mapping. Keep routine commands in the companion itself so a reviewed fast path
+does not require loading a large household reference first.
 
 ## Fictional example
 
@@ -58,3 +64,6 @@ the generic hass-cli workflow.
 - Keep the file short enough to load on every home-control request.
 - Remove stale mappings immediately after renames or topology changes.
 - Store personal preferences only when they affect control semantics.
+- Review the focused mappings periodically and after known HA renames, device
+  replacements, area changes, or automation changes; do not rediscover topology
+  before every routine request merely to compensate for possible drift.

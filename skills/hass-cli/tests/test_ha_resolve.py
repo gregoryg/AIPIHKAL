@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 import unittest
-
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "ha_resolve.py"
 SPEC = importlib.util.spec_from_file_location("ha_resolve", SCRIPT)
@@ -15,6 +16,99 @@ SPEC.loader.exec_module(ha_resolve)
 
 
 class MatchingTests(unittest.TestCase):
+    def test_exact_entity_id_shape_is_strict(self) -> None:
+        self.assertTrue(ha_resolve.is_exact_entity_id("light.reading_lamp"))
+        self.assertFalse(ha_resolve.is_exact_entity_id("Reading Lamp"))
+        self.assertFalse(ha_resolve.is_exact_entity_id("light.reading-lamp"))
+
+    def test_exact_entity_load_uses_one_state_query(self) -> None:
+        state = {
+            "entity_id": "light.reading_lamp",
+            "state": "off",
+            "attributes": {"friendly_name": "Reading Lamp"},
+        }
+        with patch.object(ha_resolve, "run_hass_json", return_value=[state]) as run:
+            entity = ha_resolve.load_exact_entity(
+                "light.reading_lamp",
+                allowed_domains=ha_resolve.DEFAULT_CONTROLLABLE_DOMAINS,
+            )
+
+        run.assert_called_once_with(["state", "list", "light.reading_lamp"])
+        self.assertIsNotNone(entity)
+        self.assertEqual(entity["label"], "Reading Lamp")
+        self.assertEqual(entity["state"], "off")
+
+    def test_exact_entity_load_rejects_unsupported_domain_without_query(self) -> None:
+        with patch.object(ha_resolve, "run_hass_json") as run:
+            entity = ha_resolve.load_exact_entity(
+                "sensor.outdoor_temperature",
+                allowed_domains=ha_resolve.DEFAULT_CONTROLLABLE_DOMAINS,
+            )
+
+        run.assert_not_called()
+        self.assertIsNone(entity)
+
+    def test_inventory_loads_all_independent_sources(self) -> None:
+        responses = {
+            ("area", "list"): [],
+            ("device", "list"): [],
+            ("entity", "list"): [],
+            ("state", "list"): [],
+        }
+
+        def fake_run(args: list[str]) -> list:
+            return responses[tuple(args)]
+
+        with patch.object(ha_resolve, "run_hass_json", side_effect=fake_run) as run:
+            inventory = ha_resolve.Inventory()
+
+        self.assertEqual(run.call_count, 4)
+        self.assertEqual(inventory.entity_records, [])
+
+    def test_exact_status_avoids_inventory_join(self) -> None:
+        state = {
+            "entity_id": "light.reading_lamp",
+            "state": "on",
+            "attributes": {"friendly_name": "Reading Lamp"},
+        }
+        args = SimpleNamespace(query="light.reading_lamp", limit=8)
+        with (
+            patch.object(ha_resolve, "run_hass_json", return_value=[state]) as run,
+            patch.object(ha_resolve, "Inventory") as inventory,
+            patch.object(ha_resolve, "print_json") as output,
+        ):
+            code = ha_resolve.command_status(args)
+
+        self.assertEqual(code, 0)
+        run.assert_called_once_with(["state", "list", "light.reading_lamp"])
+        inventory.assert_not_called()
+        self.assertEqual(output.call_args.args[0]["status"], "ok")
+
+    def test_exact_status_returns_no_match_for_missing_entity(self) -> None:
+        args = SimpleNamespace(query="light.missing", limit=8)
+        with (
+            patch.object(ha_resolve, "run_hass_json", return_value=[]),
+            patch.object(ha_resolve, "print_json") as output,
+        ):
+            code = ha_resolve.command_status(args)
+
+        self.assertEqual(code, 1)
+        self.assertEqual(output.call_args.args[0]["status"], "no_match")
+
+    def test_find_returns_no_match_for_empty_results(self) -> None:
+        inventory = MagicMock()
+        inventory.area_candidates.return_value = []
+        inventory.entity_candidates.return_value = []
+        args = SimpleNamespace(query="missing", limit=8, include_all_domains=False)
+        with (
+            patch.object(ha_resolve, "Inventory", return_value=inventory),
+            patch.object(ha_resolve, "print_json") as output,
+        ):
+            code = ha_resolve.command_find(args)
+
+        self.assertEqual(code, 1)
+        self.assertEqual(output.call_args.args[0]["status"], "no_match")
+
     def test_entity_inherits_area_from_parent_device(self) -> None:
         inventory = ha_resolve.Inventory.__new__(ha_resolve.Inventory)
         inventory.device_by_id = {
