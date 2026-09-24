@@ -2,8 +2,8 @@
 
 A companion skill supplies stable household semantics that Home Assistant's
 registries cannot: human aliases, preferred room aggregates, known intent phrases,
-and unusual device topology. It must not contain tokens, passwords, door codes,
-Wi-Fi credentials, or other secrets.
+Assist-backed to-do lists, and unusual device topology. It must not contain tokens,
+passwords, door codes, Wi-Fi credentials, or other secrets.
 
 Install each companion as its own discoverable skill directory with frontmatter
 at the beginning of `SKILL.md`, for example `skills/juniper-house/SKILL.md`. Do
@@ -64,6 +64,9 @@ the generic hass-cli workflow.
 - Prefer exact entity ids and aggregates over prose about likely behavior.
 - Record whether a phrase is direct-control, local-intent-first, or a reviewed
   preferred-pipeline Assist feature.
+- For Assist-backed lists, record exact household aliases, forbidden defaults,
+  duplicate policy, and any post-mutation verification guard validated against
+  the production pipeline.
 - Keep the file short enough to load on every home-control request.
 - Remove stale mappings immediately after renames or topology changes.
 - Store personal preferences only when they affect control semantics.

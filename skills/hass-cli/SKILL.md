@@ -1,6 +1,6 @@
 ---
 name: hass-cli
-description: Control and query Home Assistant through small JSON-first wrappers around hass-cli and the Home Assistant APIs. Use for entity discovery, room or area inspection, state questions, safe light/switch/cover control, scene/script/automation triggering, built-in local intents, preferred Assist pipeline conversations and voice/calendar reminders, weather, scheduling, or raw Home Assistant service calls.
+description: Control and query Home Assistant through small JSON-first wrappers around hass-cli and the Home Assistant APIs. Use for entity discovery, room or area inspection, state questions, safe light/switch/cover control, scene/script/automation triggering, built-in local intents, preferred Assist pipeline conversations, to-do lists, voice/calendar reminders, weather, scheduling, or raw Home Assistant service calls.
 ---
 
 # Home Assistant CLI
@@ -15,6 +15,23 @@ calculate the target time, or substitute another scheduler. On `ok`, return the
 wrapper's `speech` string verbatim as the entire response—no paraphrase, Markdown,
 or preface. On any failure, stop without fallback. A home companion may add
 stricter confirmation semantics.
+
+## Conversational to-do fast path
+
+When a home companion documents Assist-backed to-do lists, send the complete Home
+Assistant operation portion through `scripts/ha-assist` as the first and normally
+only command. Keep outer requests such as “explain your routing afterward” out of
+the HA turn. The selected HA conversation model owns fuzzy list naming and
+splitting requests such as “add A, B, and C” into separate HA tool calls. Do not
+manually parse the item list, call `ha-intent`, discover entities or services, or
+replace this route with raw `todo.*` calls.
+
+For additions, append the companion's exact active-duplicate guard to the
+original request. For removals, append its exact post-removal verification guard.
+These remain one Assist turn; the outer model must not issue one shell command per
+item. Queries need no operation guard. On `ok`, return `speech` verbatim. On
+`clarification_needed`, return the exact question. On any failure, stop without a
+fallback because the pipeline may have partially changed a list.
 
 ## Native tool fast path
 
@@ -58,6 +75,7 @@ working directory is elsewhere. Do not `cd` or source `ha-env.sh` first.
 | Find or identify an unfamiliar target | `scripts/ha-find "QUERY"` |
 | Run a reviewed local HA intent phrase | `scripts/ha-intent "PHRASE"` |
 | Create a voice/calendar reminder or run another companion-documented Assist feature | `scripts/ha-assist "COMPLETE ORIGINAL PHRASE"` |
+| Add to, query, or remove from a companion-reviewed to-do list | `scripts/ha-assist "HA OPERATION plus companion safety instruction"` |
 | Ask for an HA weather forecast | `scripts/ha-weather [OPTIONS]` |
 
 Action wrappers resolve, reject ambiguity, perform the service call, and confirm
@@ -143,9 +161,12 @@ is genuinely needed.
 through Home Assistant's preferred Assist pipeline, including that pipeline's
 conversation agent and contributed LLM tools. Use it for an explicit
 `/skill:hass-cli` reminder request or another conversational feature documented by
-the home companion. Pass the human's complete phrase unchanged; do not pre-resolve
-its date or replace it with a timer, helper schedule, raw calendar call, or
-invented confirmation.
+the home companion. For reminders, pass the human's complete phrase unchanged;
+do not pre-resolve the date or replace it with a timer, helper schedule, raw
+calendar call, or invented confirmation. For to-do operations, preserve the
+complete HA operation and append only the companion's documented list context and
+safety guard. Keep requests for outer explanation, comparison, or post-mortem out
+of the Assist turn.
 
 Interpret its compact JSON conservatively:
 
