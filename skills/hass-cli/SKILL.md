@@ -26,10 +26,13 @@ splitting requests such as “add A, B, and C” into separate HA tool calls. Do
 manually parse the item list, call `ha-intent`, discover entities or services, or
 replace this route with raw `todo.*` calls.
 
-For additions, append the companion's exact active-duplicate guard to the
-original request. For removals, append its exact post-removal verification guard.
+For additions, append the companion's exact active-duplicate guard. For
+completion or check-off requests, append its active-completion verification guard.
 These remain one Assist turn; the outer model must not issue one shell command per
-item. Queries need no operation guard. On `ok`, return `speech` verbatim. On
+item. Queries need no operation guard. Do not route remove/delete through the
+built-in list intent unless the companion documents an HA-side implementation
+that targets active item UIDs; summary-based removal may delete completed history.
+On `ok`, return `speech` verbatim. On
 `clarification_needed`, return the exact question. On any failure, stop without a
 fallback because the pipeline may have partially changed a list.
 
@@ -75,7 +78,7 @@ working directory is elsewhere. Do not `cd` or source `ha-env.sh` first.
 | Find or identify an unfamiliar target | `scripts/ha-find "QUERY"` |
 | Run a reviewed local HA intent phrase | `scripts/ha-intent "PHRASE"` |
 | Create a voice/calendar reminder or run another companion-documented Assist feature | `scripts/ha-assist "COMPLETE ORIGINAL PHRASE"` |
-| Add to, query, or remove from a companion-reviewed to-do list | `scripts/ha-assist "HA OPERATION plus companion safety instruction"` |
+| Add to, query, or complete an item on a companion-reviewed to-do list | `scripts/ha-assist "HA OPERATION plus companion safety instruction"` |
 | Ask for an HA weather forecast | `scripts/ha-weather [OPTIONS]` |
 
 Action wrappers resolve, reject ambiguity, perform the service call, and confirm
