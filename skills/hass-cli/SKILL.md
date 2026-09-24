@@ -1,9 +1,34 @@
 ---
 name: hass-cli
-description: Control and query Home Assistant through small JSON-first wrappers around hass-cli and the Home Assistant APIs. Use for entity discovery, room or area inspection, state questions, safe light/switch/cover control, scene/script/automation triggering, built-in Assist intent execution, weather, or raw Home Assistant service calls.
+description: Control and query Home Assistant through small JSON-first wrappers around hass-cli and the Home Assistant APIs. Use for entity discovery, room or area inspection, state questions, safe light/switch/cover control, scene/script/automation triggering, built-in local intents, preferred Assist pipeline conversations and voice/calendar reminders, weather, scheduling, or raw Home Assistant service calls.
 ---
 
 # Home Assistant CLI
+
+## Voice reminder fast path
+
+An explicit `/skill:hass-cli` request beginning with or semantically equivalent to
+“remind me ...” is a Home Assistant voice/calendar reminder. As the first and
+normally only action, run `scripts/ha-assist` with the complete original phrase.
+Do not load a generic timer skill, create a systemd or Home Assistant timer,
+calculate the target time, or substitute another scheduler. On `ok`, return the
+wrapper's `speech` string verbatim as the entire response—no paraphrase, Markdown,
+or preface. On any failure, stop without fallback. A home companion may add
+stricter confirmation semantics.
+
+## Native tool fast path
+
+If a `homeassistant` tool is available, prefer it for an ordinary one-target
+status, turn-on/open, turn-off/close, or scene/script/automation trigger request.
+It delegates to these wrappers, preserves their ambiguity and confirmation rules,
+and returns a terminal user-facing result without a second model turn. Do not load
+this skill merely to rediscover commands that the tool already exposes.
+
+Load this skill for room-wide or custom household routines, weather, media,
+scheduling, unsupported domains, raw service calls, failure diagnosis, or when
+the native tool is unavailable. A home companion remains authoritative for
+special semantics such as a phrase that starts an automation rather than directly
+controlling similarly named entities.
 
 ## Operational fast path
 
@@ -32,6 +57,7 @@ working directory is elsewhere. Do not `cd` or source `ha-env.sh` first.
 | List controllable things in an area | `scripts/ha-area-summary "AREA"` |
 | Find or identify an unfamiliar target | `scripts/ha-find "QUERY"` |
 | Run a reviewed local HA intent phrase | `scripts/ha-intent "PHRASE"` |
+| Create a voice/calendar reminder or run another companion-documented Assist feature | `scripts/ha-assist "COMPLETE ORIGINAL PHRASE"` |
 | Ask for an HA weather forecast | `scripts/ha-weather [OPTIONS]` |
 
 Action wrappers resolve, reject ambiguity, perform the service call, and confirm
@@ -110,6 +136,34 @@ selected Assist pipeline.
 Without home-specific doctrine, prefer deterministic direct control over
 speculative natural-language phrases. Add `--debug` only when raw HA intent data
 is genuinely needed.
+
+## Assist pipeline routing
+
+`ha-assist` is deliberately separate from `ha-intent`. It runs one text turn
+through Home Assistant's preferred Assist pipeline, including that pipeline's
+conversation agent and contributed LLM tools. Use it for an explicit
+`/skill:hass-cli` reminder request or another conversational feature documented by
+the home companion. Pass the human's complete phrase unchanged; do not pre-resolve
+its date or replace it with a timer, helper schedule, raw calendar call, or
+invented confirmation.
+
+Interpret its compact JSON conservatively:
+
+- `ok`: return the pipeline's `speech`. For a mutating feature, require the
+  home companion's documented authoritative wording before claiming success.
+- `clarification_needed`: no completion may be claimed. Return the exact question
+  in `speech`. An interactive caller can send the human's answer with
+  `ha-assist --conversation-id ID "ANSWER"`; a one-shot invocation must stop and
+  let the human issue a follow-up request.
+- `error` or `infrastructure_error`: stop. The pipeline or one of its tools may
+  have partially processed the request, so do not improvise a fallback or retry.
+
+Omitting `--pipeline` intentionally selects Home Assistant's preferred pipeline.
+Use `--pipeline ID` only when the home companion documents an exact override.
+Allow at least 150 seconds for the shell tool call because the selected agent and
+its tools may run longer than an ordinary wrapper; a caller timeout does not
+authorize an automatic retry. Add `--debug` only when bounded raw pipeline events
+are genuinely needed.
 
 ## Other domains
 

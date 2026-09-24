@@ -7,7 +7,7 @@ failures.
 
 - Python 3.10 or newer
 - `hass-cli` on `PATH`, normally installed from the `homeassistant-cli` package
-- `websockets` for `ha-intent` and `ha-weather`
+- `websockets` for `ha-intent`, `ha-assist`, and `ha-weather`
 - a Home Assistant long-lived access token
 
 Install the Python dependencies in an environment appropriate for the host:

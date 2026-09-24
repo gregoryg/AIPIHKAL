@@ -42,6 +42,8 @@ the generic hass-cli workflow.
 
 - `turn on/off the reading lamp`: use `ha-on` or `ha-off` with the exact entity id.
 - `good night`: use `ha-intent "good night"`; this is a verified automation phrase.
+- `remind me ...`: use `ha-assist` with the complete original phrase; this home's
+  preferred pipeline exposes a reviewed calendar-reminder tool.
 - `turn off downstairs`: use the aggregate `light.downstairs`, not `--all`.
 
 ## Topology
@@ -60,7 +62,8 @@ the generic hass-cli workflow.
 
 - Add a mapping only after verifying it against the live home.
 - Prefer exact entity ids and aggregates over prose about likely behavior.
-- Record whether a phrase is direct-control or intent-first.
+- Record whether a phrase is direct-control, local-intent-first, or a reviewed
+  preferred-pipeline Assist feature.
 - Keep the file short enough to load on every home-control request.
 - Remove stale mappings immediately after renames or topology changes.
 - Store personal preferences only when they affect control semantics.

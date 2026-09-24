@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ha-env.sh"
+exec "$HA_PYTHON" "$ha_env_script_dir/ha_assist.py" "$@"
