@@ -37,13 +37,15 @@ request is ambiguous or the command fails.
 
 ### Known device aliases
 
-|Name          |Device ID                               |Area                          |
-|--------------|----------------------------------------|------------------------------|
-|excession     |008afef11e0d804b86c7e72974015f06013a7158|laptop                        |
-|Rozi Office   |3c9a855de1f6f7087a144d9d4dd2a66f16673723|Rozi office, Rochelle's office|
-|Pancho + Lefty|d8af1fb21efb27793b55b31d2b3e4c74e113f796|Bedroom                       |
-|Music Room    |928bd169ef769ef083ee9dbcab2c4e28a5c7e528|Music Room, North Living Room |
-|Kitchen       |f02e9b67c561fd4ba27baede3ac0d669e3605652|Kitchen                              |
+| Name           | Device ID                                | Area                           |
+|----------------|------------------------------------------|--------------------------------|
+| excession      | 008afef11e0d804b86c7e72974015f06013a7158 | laptop                         |
+| Rozi Office    | 3c9a855de1f6f7087a144d9d4dd2a66f16673723 | Rozi office, Rochelle's office |
+| Pancho + Lefty | d8af1fb21efb27793b55b31d2b3e4c74e113f796 | Bedroom                        |
+| Music Room     | 928bd169ef769ef083ee9dbcab2c4e28a5c7e528 | Music Room, North Living Room  |
+| Kitchen        | f02e9b67c561fd4ba27baede3ac0d669e3605652 | Kitchen                        |
+| PanchoSanza    | 167c8576bfce8918e0dd544f298b71800914cec9 | Greg's phone                   |
+
 
 ### Direct patterns
 
