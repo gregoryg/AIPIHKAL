@@ -1,0 +1,22 @@
+#!/bin/bash
+# Show an identity's bot account, teams and channels.
+#
+#   mm-whoami --as IDENTITY
+#
+# Use it to diagnose "channel not found": the bot must be a member.
+set -euo pipefail
+[ "${1:-}" = --as ] && { MM_AGENT_IDENTITY=$2; shift 2; }
+export MM_AGENT_IDENTITY="${MM_AGENT_IDENTITY:-}"
+. "$(dirname "$(readlink -f "$0")")/mm-env.sh"
+
+me=$(mm_api GET /users/me)
+teams=$(mm_api GET /users/me/teams)
+channels='[]'
+for t in $(jq -r '.[].id' <<<"$teams"); do
+    channels=$(jq -c --argjson add "$(mm_api GET "/users/me/teams/$t/channels")" \
+                  '. + [$add[] | select(.type == "O" or .type == "P") | .name]' <<<"$channels")
+done
+jq -nc --argjson me "$me" --argjson teams "$teams" --argjson channels "$channels" \
+      --arg id "$MM_AGENT_IDENTITY" --arg url "$MM_URL" --arg engine "${MM_AGENT_ENGINE:-}" '
+  {identity: $id, url: $url, username: $me.username, is_bot: ($me.is_bot // false),
+   engine_default: $engine, teams: [$teams[].name], channels: $channels}'

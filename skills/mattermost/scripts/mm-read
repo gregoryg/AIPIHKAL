@@ -1,0 +1,48 @@
+#!/bin/bash
+# Read recent Mattermost posts as an agent identity.
+#
+#   mm-read --as IDENTITY (--channel NAME | --channel @user | --thread POST_ID)
+#           [--limit N] [--since POST_ID]
+#
+# Prints one JSON object per post, oldest first:
+# {id, root_id, user, at, message}.  --since returns only posts newer than
+# that post.  A channel read lists top-level posts and replies alike.
+set -euo pipefail
+
+usage() { sed -n '2,9s/^# \{0,1\}//p' "$0" >&2; exit 2; }
+
+channel= thread= limit=20 since=
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --as) MM_AGENT_IDENTITY=$2; shift 2 ;;
+        --channel) channel=$2; shift 2 ;;
+        --thread) thread=$2; shift 2 ;;
+        --limit) limit=$2; shift 2 ;;
+        --since) since=$2; shift 2 ;;
+        -h|--help) usage ;;
+        *) echo "Error: unknown argument $1" >&2; usage ;;
+    esac
+done
+export MM_AGENT_IDENTITY="${MM_AGENT_IDENTITY:-}"
+. "$(dirname "$(readlink -f "$0")")/mm-env.sh"
+
+if [ -n "$thread" ]; then
+    posts=$(mm_api GET "/posts/$thread/thread")
+elif [ -n "$channel" ]; then
+    channel_id=$(mm_channel_id "$channel")
+    query="per_page=$limit"
+    [ -n "$since" ] && query="after=$since&per_page=$limit"
+    posts=$(mm_api GET "/channels/$channel_id/posts?$query")
+else
+    echo "Error: need --channel or --thread." >&2; usage
+fi
+
+# Resolve user ids to usernames in one request
+ids=$(jq -c '[.posts[].user_id] | unique' <<<"$posts")
+users=$(mm_api POST /users/ids "$ids" | jq -c 'map({(.id): .username}) | add // {}')
+
+jq -c --argjson users "$users" --argjson limit "$limit" '
+  [.posts[] | select(.type == "")] | sort_by(.create_at) | .[-$limit:][] |
+  {id, root_id, user: ($users[.user_id] // .user_id),
+   at: (.create_at / 1000 | floor | todate),
+   message}' <<<"$posts"

@@ -1,0 +1,58 @@
+#!/bin/bash
+# Post to Mattermost as an agent identity.
+#
+#   mm-post --as IDENTITY (--channel NAME | --channel @user | --thread POST_ID)
+#           [--engine "Harness · model"] [MESSAGE...]
+#
+# MESSAGE defaults to stdin.  The engine credit line is appended unless
+# --no-credit is given; --engine overrides MM_AGENT_ENGINE.
+# Prints JSON: {ok, post_id, channel_id, root_id, permalink}.
+set -euo pipefail
+
+usage() { sed -n '2,10s/^# \{0,1\}//p' "$0" >&2; exit 2; }
+
+channel= thread= engine= credit=1
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --as) MM_AGENT_IDENTITY=$2; shift 2 ;;
+        --channel) channel=$2; shift 2 ;;
+        --thread) thread=$2; shift 2 ;;
+        --engine) engine=$2; shift 2 ;;
+        --no-credit) credit=0; shift ;;
+        -h|--help) usage ;;
+        --) shift; break ;;
+        -*) echo "Error: unknown option $1" >&2; usage ;;
+        *) break ;;
+    esac
+done
+export MM_AGENT_IDENTITY="${MM_AGENT_IDENTITY:-}"
+. "$(dirname "$(readlink -f "$0")")/mm-env.sh"
+
+if [ $# -gt 0 ]; then message="$*"; else message=$(cat); fi
+[ -n "${message//[[:space:]]/}" ] || { echo "Error: empty message." >&2; exit 2; }
+[ -n "$channel" ] || [ -n "$thread" ] || { echo "Error: need --channel or --thread." >&2; usage; }
+
+engine=${engine:-${MM_AGENT_ENGINE:-}}
+if [ "$credit" = 1 ]; then
+    if [ -z "$engine" ]; then
+        echo "Error: no engine credit. Pass --engine \"Harness · model\", set MM_AGENT_ENGINE, or --no-credit." >&2
+        exit 2
+    fi
+    message=$(printf '%s\n\n_— %s · %s_' "$message" "$MM_AGENT_IDENTITY" "$engine")
+fi
+
+if [ -n "$thread" ]; then
+    root=$(mm_api GET "/posts/$thread")
+    channel_id=$(jq -r .channel_id <<<"$root")
+    # Reply to the thread's root even when given a reply's id
+    thread=$(jq -r 'if .root_id != "" then .root_id else .id end' <<<"$root")
+else
+    channel_id=$(mm_channel_id "$channel")
+fi
+
+body=$(jq -nc --arg c "$channel_id" --arg r "$thread" --arg m "$message" \
+          '{channel_id: $c, message: $m} + (if $r != "" then {root_id: $r} else {} end)')
+post=$(mm_api POST /posts "$body")
+team_name=$(mm_api GET "/teams/$(mm_team_id)" | jq -r .name)
+jq -c --arg u "$MM_URL" --arg t "$team_name" \
+   '{ok: true, post_id: .id, channel_id, root_id, permalink: "\($u)/\($t)/pl/\(.id)"}' <<<"$post"
