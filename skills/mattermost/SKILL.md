@@ -83,10 +83,10 @@ unless given `--no-credit`.  Name the harness and the model, for example
 
 ## Troubleshooting
 
-| Symptom | Cause and fix |
-|---|---|
-| `channel 'X' not found or the bot is not a member` | Private channels are invisible to non-members.  Run `mm-whoami`; ask the human to `/invite @<identity>`. |
-| `no token file for identity` | Create `~/.config/mattermost/agents/<identity>.env`. |
-| `bot is on N teams` | Set `MM_TEAM` in the token file. |
-| HTTP 401 | The token was revoked or mistyped; the human regenerates it. |
-| TLS error | The host does not trust Caddy's internal CA. |
+|Symptom                                           |Cause and fix                                                                                           |
+|--------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+|`channel 'X' not found or the bot is not a member`|Private channels are invisible to non-members.  Run `mm-whoami`; ask the human to `/invite @<identity>`.|
+|`no token file for identity`                      |Create `~/.config/mattermost/agents/<identity>.env`.                                                    |
+|`bot is on N teams`                               |Set `MM_TEAM` in the token file.                                                                        |
+|HTTP 401                                          |The token was revoked or mistyped; the human regenerates it.                                            |
+|TLS error                                         |The host does not trust Caddy's internal CA.                                                            |
