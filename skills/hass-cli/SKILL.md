@@ -68,18 +68,18 @@ working directory is elsewhere. Do not `cd` or source `ha-env.sh` first.
 
 ## Choose one command
 
-| User intent | First and normally only command |
-|---|---|
-| Is something on, off, open, or closed? | `scripts/ha-status "QUERY"` |
-| Turn on or open one resolved target | `scripts/ha-on "QUERY"` |
-| Turn off or close one resolved target | `scripts/ha-off "QUERY"` |
-| Activate a scene, script, or automation | `scripts/ha-trigger "QUERY"` |
-| List controllable things in an area | `scripts/ha-area-summary "AREA"` |
-| Find or identify an unfamiliar target | `scripts/ha-find "QUERY"` |
-| Run a reviewed local HA intent phrase | `scripts/ha-intent "PHRASE"` |
-| Create a voice/calendar reminder or run another companion-documented Assist feature | `scripts/ha-assist "COMPLETE ORIGINAL PHRASE"` |
-| Add to, query, or complete an item on a companion-reviewed to-do list | `scripts/ha-assist "HA OPERATION plus companion safety instruction"` |
-| Ask for an HA weather forecast | `scripts/ha-weather [OPTIONS]` |
+| User intent                                                                         | First and normally only command                                      |
+|-------------------------------------------------------------------------------------|----------------------------------------------------------------------|
+| Is something on, off, open, or closed?                                              | `scripts/ha-status "QUERY"`                                          |
+| Turn on or open one resolved target                                                 | `scripts/ha-on "QUERY"`                                              |
+| Turn off or close one resolved target                                               | `scripts/ha-off "QUERY"`                                             |
+| Activate a scene, script, or automation                                             | `scripts/ha-trigger "QUERY"`                                         |
+| List controllable things in an area                                                 | `scripts/ha-area-summary "AREA"`                                     |
+| Find or identify an unfamiliar target                                               | `scripts/ha-find "QUERY"`                                            |
+| Run a reviewed local HA intent phrase                                               | `scripts/ha-intent "PHRASE"`                                         |
+| Create a voice/calendar reminder or run another companion-documented Assist feature | `scripts/ha-assist "COMPLETE ORIGINAL PHRASE"`                       |
+| Add to, query, or complete an item on a companion-reviewed to-do list               | `scripts/ha-assist "HA OPERATION plus companion safety instruction"` |
+| Ask for an HA weather forecast                                                      | `scripts/ha-weather [OPTIONS]`                                       |
 
 Action wrappers resolve, reject ambiguity, perform the service call, and confirm
 physical state where possible. They do not need a separate discovery or status
