@@ -40,6 +40,11 @@ Use recent, well-explained commits to discover local conventions: subject syntax
 scope names, capitalization, body length, ChangeLog-style anchors, issue references,
 and whether tests or documentation normally travel with implementation.
 
+When you have drafted messages for this repository before, compare those drafts
+with what was actually committed. The human's edits, such as an added purpose
+sentence, trimmed detail, or split paragraphs, are the most direct evidence of
+the style they want. Adopt them in the next drafts.
+
 Distinguish the user's existing changes from work produced in the current task.
 Never infer authorship merely because a file is modified.
 
@@ -140,11 +145,17 @@ multiple file names merely to account for the whole diff.
 Keep the subject specific, imperative, and normally under 72 characters. Prefer
 the observable outcome over an implementation detail. Match local capitalization.
 
-After a blank line, explain the facts a future maintainer cannot obtain cheaply
-from the diff:
+After a blank line, open with one plain sentence stating the change's purpose.
+Then say what changed, in short paragraphs that each carry one idea. Prefer prose
+to bullet lists in the body; keep bullets for genuinely parallel items, such as a
+set of renamed options. This is an aesthetic default, not a rule.
 
-- the problem, invariant, or user-visible behavior;
-- why this approach is appropriate;
+Focus on what the change does and why it matters to a reader of the history.
+Explain how it works, or the history that led to it, only when a reader could not
+act correctly without that context. State these when they apply:
+
+- user-visible behavior, and for a behavior-preserving change, a closing line
+  such as “Behavior is unchanged, except …”;
 - important boundaries, compatibility concerns, or failure modes; and
 - known limitations or design debt when they affect future work.
 
@@ -191,7 +202,8 @@ Before handing off messages or making authorized commits, verify:
 
 - the series covers every intended hunk exactly once;
 - subjects distinguish the commits at a glance;
-- bodies explain why and behavior rather than restating the diff;
+- bodies open with purpose and say what changed, without restating the diff
+  or narrating how it was built;
 - line wrapping, spelling, identifiers, and commit references are correct;
 - no message claims tests, docs, compatibility, or behavior absent from its diff;
 - each staged diff matches its message; and
