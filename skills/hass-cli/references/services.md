@@ -72,20 +72,20 @@ hass-cli service call cover.set_cover_position --arguments entity_id=cover.livin
 **media_player.play_media**
 ```bash
 hass-cli service call media_player.play_media \
-  --arguments entity_id=media_player.living_room,media_content_id="spotify:playlist:xxxxx",media_content_type="playlist"
+  --arguments entity_id=media_player.example_speaker,media_content_id="spotify:playlist:xxxxx",media_content_type="playlist"
 ```
 
 **media_player.volume_set**
 ```bash
 # Volume: 0.0-1.0
-hass-cli service call media_player.volume_set --arguments entity_id=media_player.living_room,volume_level=0.5
+hass-cli service call media_player.volume_set --arguments entity_id=media_player.example_speaker,volume_level=0.5
 ```
 
 **media_player.media_play / pause / stop**
 ```bash
-hass-cli service call media_player.media_play --arguments entity_id=media_player.living_room
-hass-cli service call media_player.media_pause --arguments entity_id=media_player.living_room
-hass-cli service call media_player.media_stop --arguments entity_id=media_player.living_room
+hass-cli service call media_player.media_play --arguments entity_id=media_player.example_speaker
+hass-cli service call media_player.media_pause --arguments entity_id=media_player.example_speaker
+hass-cli service call media_player.media_stop --arguments entity_id=media_player.example_speaker
 ```
 
 ## Notification Services
