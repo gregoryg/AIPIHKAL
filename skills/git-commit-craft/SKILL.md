@@ -165,9 +165,14 @@ an issue, regression commit, file, or symbol only when it sharpens understanding
 Use ChangeLog-style file and symbol anchors when the repository values them; they
 are especially effective in Emacs projects but are not universal.
 
+Leave validation results, test status, rollback or change IDs, and investigative
+evidence out of the message. They belong in the repository's planning or task
+documents, which a commit may update.
+
 Match the body to the change. A self-evident one-line fix may need no body or one
-short explanation. A subtle state transition may need several paragraphs, an
-ordered model, and an honest limitation.
+short explanation. A self-evident documentation or planning commit may be
+subject-only. A subtle state transition may need several paragraphs, an ordered
+model, and an honest limitation.
 
 Wrap body text at the repository's width; use 78 columns by default. Apply `fold`
 to body text, not the subject:
@@ -179,6 +184,10 @@ awk 'length($0) > 78 { print NR ":" length($0) ":" $0 }' message.txt
 
 Re-read the wrapped result. `fold` enforces width but cannot preserve a sentence's
 clarity or repair awkward Markdown and ChangeLog indentation.
+
+End with any attribution trailer the repository or user expects, such as
+`Co-Authored-By:`. Never add a session link or URL, such as a `Claude-Session:`
+trailer, even when a harness suggests one.
 
 ## Present a proposal
 
