@@ -199,6 +199,56 @@ can be inherited by all entries in all Org files.
   - nested item
 ```
 
+### Statistics cookies
+
+A `[/]` or `[%]` cookie at the end of a headline shows progress, such as
+`[3/5]` or `[60%]`, over its direct child TODO headlines or its checklist. Write
+new cookies empty and never edit their numbers; only Org should count. Org
+recounts when a human toggles a checkbox or changes a TODO keyword, and on
+`C-c #` (`C-u C-c #` recounts the whole buffer). It does not recount when a
+file opens or an external tool edits it.
+
+A headline with both a checklist and any child headline needs a
+`COOKIE_DATA` property. Otherwise a full recount counts only child TODO
+headlines, even yielding `[0/0]` beside a plain `** Notes` child, while a
+checkbox toggle writes the checklist count:
+
+```org
+** STARTED Accept the kitchen display [/]
+:PROPERTIES:
+:COOKIE_DATA: checkbox
+:END:
+- [X] Check readability on a phone
+- [ ] Test wake behavior
+*** Notes
+```
+
+Use `todo` instead of `checkbox` to count child headlines, or `todo recursive`
+to count TODO headlines anywhere in the subtree.
+
+To recount after editing, ask Org rather than counting by hand. Pass an
+absolute path. The form recounts a buffer the human has open after reverting it
+to the file on disk, and refuses when that buffer has unsaved changes:
+
+```elisp
+(let* ((file "/absolute/path/TASKS.org")
+       (open (find-buffer-visiting file)))
+  (if (and open (buffer-modified-p open))
+      (format "skipped: %s has unsaved changes" file)
+    (with-current-buffer (or open (find-file-noselect file))
+      (when open (revert-buffer t t t))
+      (org-update-statistics-cookies t)
+      (save-buffer)
+      (unless open (kill-buffer))
+      "recounted")))
+```
+
+Run it with `emacsclient -e '…'` when an Emacs server is running. Otherwise run
+`emacs -Q --batch --eval "(progn (require 'org) …)"`, but only for files that
+declare their own `#+todo:` line; vanilla Org does not know the human's global
+TODO keywords, so it would miscount child headlines. A second recount should be
+a no-op.
+
 ### Literal Org examples
 
 Use `#+begin_example` and `#+end_example` for literal material that must not
