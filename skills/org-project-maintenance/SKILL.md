@@ -217,6 +217,23 @@ To use the above lifecycle, insert the following after the frontmatter:
 - the feature landed and basic validation passed
 - the task would otherwise continue cluttering active work
 
+## Progress cookies
+
+The human reads statistics cookies while reviewing pending acceptance work and
+deciding what to postpone, remove, or archive. Org does the counting; counting
+is never the agent's job.
+
+- Add an empty `[/]` cookie to the end of any task heading that has child
+  task headings or a checklist worth reviewing.
+- Never type, correct, or remove the numbers in an existing cookie, including
+  `[%]` forms. A stale count is acceptable; a guessed count is not.
+- Toggle checkboxes and change TODO keywords with ordinary file edits, as usual.
+- When a heading has both a checklist and any child heading, add a
+  `:COOKIE_DATA: checkbox` or `:COOKIE_DATA: todo` property so the two sources
+  do not overwrite each other.
+- Optionally ask Org to recount after editing, using the command in the
+  `org-mode-syntax` skill. Never recount by hand.
+
 ## Minimalism rules for project docs
 
 Project docs should be information-dense, not exhaustive.
