@@ -27,6 +27,25 @@ Proceed only when a supported read/write interface and an exact inverse are
 known. Capture a bounded semantic export or API object; do not commit `.storage`
 wholesale. If the supported interface cannot restore the original state, stop.
 
+Interfaces proven so far, with their inverses:
+
+- Device name: `config/device_registry/update` with `name_by_user`. Restore
+  the captured value; `null` returns to the integration's name.
+- Entity name: `config/entity_registry/update` with `name`, restored the same
+  way.
+- Energy dashboard: `energy/save_prefs` replaces only the top-level keys sent,
+  such as `device_consumption`. Restore by saving the captured keys.
+- UI-created helpers: create through `/api/config/config_entries/flow` and
+  delete the entry to undo. The Energy dashboard's power-to-energy step (HA
+  2026.11) is an `integration` flow with `method: left`, `max_sub_interval` of
+  five minutes, `round: 3`, and `device_class: energy`. The UI reuses any
+  `integration` helper with the same source sensor and device class.
+- Deleting a config entry has no API inverse; re-adding may need a fresh
+  login. Capture only non-secret metadata, such as domain, title, and dates.
+
+To inspect a storage file on the host, filter it there with `jq` and print only
+the keys needed, or an equality result; config entries hold tokens.
+
 ## Runtime-only
 
 Entity state, active timers, media sessions, and transient service effects are

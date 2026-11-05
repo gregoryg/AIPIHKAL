@@ -61,6 +61,13 @@ Trace output excludes raw config and detailed step payloads by default. Use it
 to establish run identity, completion, last step, errors, and executed path—not
 to dump unbounded integration data into context.
 
+For log evidence, prefer the host's `ha core logs`, which keeps timestamps for
+days. `system_log/list` groups entries by logger and source with a count since
+the last restart, so one entry can mix unrelated failures. When several cloud
+integrations log DNS timeouts or "Network unreachable" at the same instant,
+inspect the host's DNS with `ha dns info` and `ha dns logs` before blaming a
+provider.
+
 Repeat the opt-in metadata-only live checks with:
 
 ```bash
@@ -101,6 +108,24 @@ For every Assist-facing change:
 Audit positive and negative space. Confirming the required tool is exposed does
 not establish that a stale contradictory helper is absent, and confirming stale
 entities are absent does not establish that the required tool is available.
+
+Since HA 2026.11 a displayed name is composed: device name, then entity name.
+`config/entity_registry/list` returns neither aliases nor the composed name;
+read aliases with `config/entity_registry/get_entries`. When an exposed
+entity's full name changes, HA keeps the old name as its first alias. Rename a
+device through `config/device_registry/update`, which never renames entity IDs.
+The UI's rename dialog offers to rename them too; decline, because YAML refers
+to entity IDs.
+
+## Write custom LLM tools to the current contract
+
+A tool returned through `llm.LLMTools` sets `integration` to its domain, uses a
+`DOMAIN__` name prefix, and returns `llm.ToolResult`. HA 2026.11 logs a warning
+for an untagged tool or a plain JSON result; they stop working in 2027.10 and
+2027.11.0. A clarification question is a normal result, not `error=True`; raise
+`HomeAssistantError` for failures. The warning for a missing `integration`
+appears whenever a conversation collects tools; the JSON-result warning appears
+only when the tool is called.
 
 ## Follow the live-first workflow
 
