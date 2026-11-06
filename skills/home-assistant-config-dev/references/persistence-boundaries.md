@@ -33,6 +33,19 @@ Interfaces proven so far, with their inverses:
   the captured value; `null` returns to the integration's name.
 - Entity name: `config/entity_registry/update` with `name`, restored the same
   way.
+- Entity ID: `config/entity_registry/update` with `new_entity_id`; rename back
+  to undo. The recorder moves history and statistics to the new ID unless the
+  new ID already has some, such as an entity deleted with its integration. HA
+  then logs `Cannot migrate history` and `Cannot rename statistic_id`, and the
+  renamed entity carries on the existing history. Its own history stays under
+  the old ID. That keeps an energy meter's statistics across an integration
+  swap when the reading continues where it left off.
+- Storage dashboard: read with `lovelace/config` and `url_path`, write the
+  whole configuration with `lovelace/config/save`. Restore by saving the
+  captured configuration.
+- Assist exposure: `homeassistant/expose_entity` with `assistants`,
+  `entity_ids`, and `should_expose`. Restore the captured value from
+  `homeassistant/expose_entity/list`.
 - Energy dashboard: `energy/save_prefs` replaces only the top-level keys sent,
   such as `device_consumption`. Restore by saving the captured keys.
 - UI-created helpers: create through `/api/config/config_entries/flow` and
@@ -42,6 +55,9 @@ Interfaces proven so far, with their inverses:
   `integration` helper with the same source sensor and device class.
 - Deleting a config entry has no API inverse; re-adding may need a fresh
   login. Capture only non-secret metadata, such as domain, title, and dates.
+  The interface is REST `DELETE /api/config/config_entries/entry/ENTRY_ID`;
+  there is no WebSocket command. An agent harness may refuse it, so be ready to
+  ask the human to delete the integration in the UI.
 
 To inspect a storage file on the host, filter it there with `jq` and print only
 the keys needed, or an equality result; config entries hold tokens.

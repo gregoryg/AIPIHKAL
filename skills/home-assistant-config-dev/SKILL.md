@@ -117,6 +117,27 @@ device through `config/device_registry/update`, which never renames entity IDs.
 The UI's rename dialog offers to rename them too; decline, because YAML refers
 to entity IDs.
 
+## Replace an integration for a device
+
+A replacement integration rarely passes the old one's data through unchanged.
+When one device moves to another integration:
+
+1. Read the new integration's source for each entity's states. Values such as
+   `finished` and `finish`, or `run` and `active`, differ, and one entity may
+   collapse states, such as reading `idle` while paused.
+2. Find every reference to the old entity IDs. A repository search misses
+   storage dashboards, Energy preferences, and exposure, so also list the
+   matching file names in the host's `.storage` without printing contents.
+3. Remove the old integration before renaming the new entities onto any old
+   IDs. Reuse an old ID only where the meaning is unchanged, such as an energy
+   meter; see [persistence-boundaries.md](references/persistence-boundaries.md).
+4. A rename produces a state with no previous one. A state trigger's
+   `not_from` does not filter it, so a template that reads
+   `trigger.from_state` must check it.
+5. New entities are not exposed to Assist when `expose_new` is false, and they
+   may include controls such as start and stop buttons. Expose only the
+   intended entity and confirm that the controls stay hidden.
+
 ## Write custom LLM tools to the current contract
 
 A tool returned through `llm.LLMTools` sets `integration` to its domain, uses a
